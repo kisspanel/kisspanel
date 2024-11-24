@@ -2,6 +2,81 @@
 
 This document outlines the testing procedures for KissPanel installation and configuration.
 
+## Automated Testing
+
+KissPanel provides an automated test suite to verify your installation. This should be your first step in testing a new installation.
+
+### Running the Test Suite
+
+1. Download the test script:
+```bash
+wget https://raw.githubusercontent.com/kisspanel/kisspanel/main/tools/test-install.sh
+chmod +x test-install.sh
+```
+
+2. Run the tests:
+```bash
+./test-install.sh
+```
+
+### Test Coverage
+
+The automated test suite verifies:
+
+- Directory Structure
+  - Existence of all required directories
+  - Proper permissions
+
+- User Management
+  - Panel user creation
+  - Group creation
+  - Proper user permissions
+
+- Core Services
+  - Nginx status
+  - PHP-FPM status
+  - Service configurations
+
+- Configuration Files
+  - Presence of all required configs
+  - File permissions
+  - Basic syntax validation
+
+- Database
+  - SQLite database existence
+  - Database accessibility
+  - Basic query functionality
+
+- Web Access
+  - Panel accessibility
+  - SSL/TLS configuration
+  - Port availability
+
+### Understanding Test Results
+
+Test results are color-coded:
+- 🟢 `[PASS]` - Component tested successfully
+- 🔴 `[FAIL]` - Component test failed
+- 🟡 `[WARN]` - Non-critical issue detected
+
+Example output:
+```
+Starting KissPanel Installation Tests
+======================================
+Testing directory structure...
+[PASS] Directory exists: /usr/local/kisspanel
+[PASS] Directory exists: /usr/local/kisspanel/bin
+...
+Testing core services...
+[PASS] Service running: nginx
+[PASS] Service running: php-fpm
+...
+======================================
+All tests passed successfully!
+```
+
+## Manual Testing
+
 ## Pre-Installation Requirements
 
 ### System Requirements
@@ -270,4 +345,3 @@ If you encounter issues during testing:
    - System information
    - Installation method used
    - Steps to reproduce the issue
-   
