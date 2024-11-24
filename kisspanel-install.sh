@@ -5,7 +5,7 @@
 #----------------------------------------------------------#
 
 # Version: 0.1.0
-# Build Date: 2024-11-24 14:26:53
+# Build Date: 2024-11-24 15:40:53
 # Website: https://kisspanel.org
 # GitHub: https://github.com/kisspanel/kisspanel
 
@@ -47,11 +47,12 @@ check_root() {
 }
 
 # Detect and validate OS
+# Detect and validate OS
 detect_os() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
         OS=$ID
-        VERSION_ID=$VERSION_ID
+        VERSION_ID=${VERSION_ID%.*}  # This will convert "8.10" to "8"
         
         case $OS in
             ubuntu)
@@ -794,6 +795,55 @@ EOF
 }
 
 # interactive functions
+#!/bin/bash
+
+#----------------------------------------------------------#
+#                    Interactive Setup                       #
+#----------------------------------------------------------#
+
+interactive_setup() {
+    log "Starting interactive setup..."
+    
+    # Hostname
+    if [ -z "$HOSTNAME" ]; then
+        read -p "Enter hostname (default: $(hostname)): " input_hostname
+        HOSTNAME=${input_hostname:-$(hostname)}
+    fi
+    
+    # Port
+    if [ -z "$PORT" ]; then
+        read -p "Enter panel port (default: 8083): " input_port
+        PORT=${input_port:-8083}
+    fi
+    
+    # Email
+    if [ -z "$EMAIL" ]; then
+        read -p "Enter admin email: " input_email
+        while [[ ! "$input_email" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]; do
+            echo "Invalid email format"
+            read -p "Enter admin email: " input_email
+        done
+        EMAIL=$input_email
+    fi
+    
+    # Password
+    if [ -z "$PASSWORD" ]; then
+        read -s -p "Enter admin password: " input_password
+        echo
+        read -s -p "Confirm admin password: " confirm_password
+        echo
+        while [[ "$input_password" != "$confirm_password" ]]; do
+            echo "Passwords do not match"
+            read -s -p "Enter admin password: " input_password
+            echo
+            read -s -p "Confirm admin password: " confirm_password
+            echo
+        done
+        PASSWORD=$input_password
+    fi
+    
+    log "Interactive setup completed"
+}
 
 #----------------------------------------------------------#
 #                    OS-Specific Functions                   #
