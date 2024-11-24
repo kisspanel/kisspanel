@@ -5,7 +5,7 @@
 #----------------------------------------------------------#
 
 # Version: 0.1.0
-# Build Date: 2024-11-24 14:18:48
+# Build Date: 2024-11-24 14:26:53
 # Website: https://kisspanel.org
 # GitHub: https://github.com/kisspanel/kisspanel
 
@@ -132,9 +132,12 @@ download_configs() {
     log "Downloading configuration files..."
     
     local tmp_dir=$(mktemp -d)
+    local config_version="0.1.3"  # We can make this dynamic later
+    local config_url="https://github.com/kisspanel/kisspanel/archive/refs/tags/v${config_version}.tar.gz"
     
     # Download configurations
-    if ! curl -sSL "$CONFIG_URL" -o "$tmp_dir/configs.tar.gz"; then
+    log "Downloading from: $config_url"
+    if ! curl -sSL "$config_url" -o "$tmp_dir/configs.tar.gz"; then
         rm -rf "$tmp_dir"
         error "Failed to download configuration files"
     fi
@@ -148,18 +151,32 @@ download_configs() {
     # Create configuration directories
     mkdir -p "$KISSPANEL_DIR/conf"
     
+    # The extracted directory will be named kisspanel-0.1.3
+    local extract_dir="$tmp_dir/kisspanel-${config_version}"
+    
     # Copy configurations to proper locations
-    cp -r "$tmp_dir/nginx" "$KISSPANEL_DIR/conf/"
-    cp -r "$tmp_dir/php" "$KISSPANEL_DIR/conf/"
-    cp -r "$tmp_dir/panel" "$KISSPANEL_DIR/conf/"
+    log "Installing configuration files..."
+    
+    # Copy main configurations
+    cp -r "$extract_dir/configs/nginx" "$KISSPANEL_DIR/conf/"
+    cp -r "$extract_dir/configs/php" "$KISSPANEL_DIR/conf/"
+    cp -r "$extract_dir/configs/panel" "$KISSPANEL_DIR/conf/"
     
     # Copy system configurations
-    cp -r "$tmp_dir/system/cron.d/"* "/etc/cron.d/"
-    cp -r "$tmp_dir/system/fail2ban/"* "/etc/fail2ban/"
+    if [ -d "$extract_dir/configs/system/cron.d" ]; then
+        cp -r "$extract_dir/configs/system/cron.d/"* "/etc/cron.d/"
+        chmod 644 /etc/cron.d/kisspanel
+    fi
+    
+    if [ -d "$extract_dir/configs/system/fail2ban" ]; then
+        cp -r "$extract_dir/configs/system/fail2ban/"* "/etc/fail2ban/"
+        chmod 644 /etc/fail2ban/jail.d/kisspanel.conf
+    fi
     
     # Set proper permissions
-    chmod 644 /etc/cron.d/kisspanel
-    chmod 644 /etc/fail2ban/jail.d/kisspanel.conf
+    chown -R root:root "$KISSPANEL_DIR/conf"
+    find "$KISSPANEL_DIR/conf" -type d -exec chmod 755 {} \;
+    find "$KISSPANEL_DIR/conf" -type f -exec chmod 644 {} \;
     
     # Cleanup
     rm -rf "$tmp_dir"
