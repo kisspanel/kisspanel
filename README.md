@@ -10,6 +10,16 @@ chmod +x kisspanel-install.sh
 ./kisspanel-install.sh
 ```
 
+## Installation Builder
+
+Use our interactive installation builder to create your custom installation command:
+[KissPanel Installation Builder](https://kisspanel.github.io/kisspanel/)
+
+This tool helps you:
+- Select desired components
+- Configure installation options
+- Generate the complete installation command
+
 ## System Requirements
 
 - **Operating Systems:**
