@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KissPanel Installer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="sticky top-0 bg-gray-50/95 backdrop-blur z-50 shadow-sm">
+        <div class="container mx-auto px-4 py-4 max-w-7xl">
+            <h1 class="text-2xl font-semibold mb-6">KissPanel Installer</h1>
+
+            <!-- Download Instructions -->
+            <p class="text-gray-700 mb-2">Log in to your server e.g. ssh root@your.server then download the installation script:</p>
+            <div class="relative mb-6">
+                <div class="bg-gray-900 text-white p-4 rounded font-mono text-sm" id="download-command">
+                    wget https://raw.githubusercontent.com/kisspanel/kisspanel/release/install/kp-install.sh
+                </div>
+                <button onclick="copyText('download-command')" 
+                        class="absolute right-0 top-0 h-full px-4 bg-gray-700 text-white rounded-r hover:bg-gray-600 transition-colors">
+                    Copy
+                </button>
+            </div>
+
+            <!-- Installation Command -->
+            <p class="text-gray-700 mb-2">Check you are running as the root user, configure the options you want below, then run:</p>
+            <div class="relative mb-4">
+                <div class="bg-gray-900 text-white p-4 rounded font-mono text-sm" id="command">
+                    bash kp-install.sh
+                </div>
+                <div class="absolute right-0 top-0 h-full flex">
+                    <button onclick="resetInstaller()" 
+                            class="px-4 bg-red-600 text-white h-full hover:bg-red-700 transition-colors border-r">
+                        Reset
+                    </button>
+                    <button onclick="copyText('command')" 
+                            class="px-4 bg-gray-700 text-white rounded-r hover:bg-gray-600 transition-colors">
+                        Copy
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="container mx-auto px-4 py-4 max-w-7xl">
+            <!-- System Configuration Section -->
+            <div class="border-b-2 border-gray-200 pb-2 mb-6">
+                <h2 class="text-lg font-semibold text-gray-800">System Configuration</h2>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                <!-- Port -->
+                <div class="bg-gray-100 p-4 rounded-lg min-h-[52px]">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="enable_port" 
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label class="text-sm text-gray-700">Custom Port</label>
+                        </div>
+                        <div class="relative group">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" 
+                                class="w-5 h-5 text-gray-500 cursor-help">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
+                            <div class="absolute right-0 w-48 p-2 bg-gray-900 text-white text-sm rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 text-center">
+                                Must be a number between 2000-9999
+                            </div>
+                        </div>
+                    </div>
+                    <div class="hidden" id="port_input_container">
+                        <input type="text" 
+                            id="port" 
+                            value="8083" 
+                            class="w-full px-3 py-2 bg-white rounded border border-gray-300 
+                                    focus:border-blue-500 focus:ring-1 focus:ring-blue-500
+                                    text-sm text-gray-700 placeholder-gray-400
+                                    transition duration-150 ease-in-out"
+                            placeholder="Enter port number"
+                            disabled>
+                    </div>
+                </div>
+
+                <!-- Language -->
+                <div class="bg-gray-100 p-4 rounded-lg min-h-[52px]">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="enable_language" 
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label class="text-sm text-gray-700">Custom Language</label>
+                        </div>
+                        <div class="relative group">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" 
+                                class="w-5 h-5 text-gray-500 cursor-help">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
+                            <div class="absolute right-0 w-48 p-2 bg-gray-900 text-white text-sm rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 text-center">
+                                Select interface language
+                            </div>
+                        </div>
+                    </div>
+                    <div class="hidden" id="language_input_container">
+                        <select id="language" 
+                                class="w-full px-3 py-2 bg-white rounded border border-gray-300 
+                                    focus:border-blue-500 focus:ring-1 focus:ring-blue-500
+                                    text-sm text-gray-700
+                                    transition duration-150 ease-in-out"
+                                disabled>
+                            <option value="en">English</option>
+                            <option value="es">Spanish</option>
+                        </select>
+                    </div>
+                </div>
+                <!-- Hostname -->
+                <div class="bg-gray-100 p-4 rounded-lg min-h-[52px]">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="enable_hostname" 
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label class="text-sm text-gray-700">Custom Hostname</label>
+                        </div>
+                        <div class="relative group">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" 
+                                class="w-5 h-5 text-gray-500 cursor-help">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
+                            <div class="absolute right-0 w-48 p-2 bg-gray-900 text-white text-sm rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 text-center">
+                                Must be a valid hostname format (e.g., server.domain.com)
+                            </div>
+                        </div>
+                    </div>
+                    <div class="hidden" id="hostname_input_container">
+                        <input type="text" 
+                            id="hostname" 
+                            class="w-full px-3 py-2 bg-white rounded border border-gray-300 
+                                    focus:border-blue-500 focus:ring-1 focus:ring-blue-500
+                                    text-sm text-gray-700 placeholder-gray-400
+                                    transition duration-150 ease-in-out"
+                            placeholder="Enter hostname"
+                            disabled>
+                    </div>
+                </div>
+
+                <!-- Email -->
+                <div class="bg-gray-100 p-4 rounded-lg min-h-[52px]">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="enable_email" 
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label class="text-sm text-gray-700">Admin Email</label>
+                        </div>
+                        <div class="relative group">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" 
+                                class="w-5 h-5 text-gray-500 cursor-help">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
+                            <div class="absolute right-0 w-48 p-2 bg-gray-900 text-white text-sm rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 text-center">
+                                Must be a valid email address
+                            </div>
+                        </div>
+                    </div>
+                    <div class="hidden" id="email_input_container">
+                        <input type="email" 
+                            id="email" 
+                            class="w-full px-3 py-2 bg-white rounded border border-gray-300 
+                                    focus:border-blue-500 focus:ring-1 focus:ring-blue-500
+                                    text-sm text-gray-700 placeholder-gray-400
+                                    transition duration-150 ease-in-out"
+                            placeholder="Enter admin email"
+                            disabled>
+                    </div>
+                </div>
+
+                <!-- Password -->
+                <div class="bg-gray-100 p-4 rounded-lg min-h-[52px]">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="enable_password" 
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label class="text-sm text-gray-700">Admin Password</label>
+                        </div>
+                        <div class="relative group">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" 
+                                class="w-5 h-5 text-gray-500 cursor-help">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
+                            <div class="absolute right-0 w-48 p-2 bg-gray-900 text-white text-sm rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 text-center">
+                                Must start with a letter and contain at least one uppercase letter, one lowercase letter, and one number
+                            </div>
+                        </div>
+                    </div>
+                    <div class="hidden" id="password_input_container">
+                        <div class="flex space-x-2">
+                            <input type="text" 
+                                id="password" 
+                                class="flex-1 px-3 py-2 bg-white rounded-l border border-gray-300 
+                                        focus:border-blue-500 focus:ring-1 focus:ring-blue-500
+                                        text-sm text-gray-700 placeholder-gray-400
+                                        transition duration-150 ease-in-out"
+                                placeholder="Enter admin password"
+                                disabled>
+                            <button onclick="generatePassword()" 
+                                    class="px-3 py-2 bg-gray-200 text-gray-700 rounded-r border border-gray-300 
+                                        hover:bg-gray-300 transition-colors text-sm">
+                                Generate
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- File System Quota -->
+                <div class="bg-gray-100 p-4 rounded-lg min-h-[52px]">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="quota" 
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label class="text-sm text-gray-700">File System Quota</label>
+                        </div>
+                        <div class="relative group">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" 
+                                class="w-5 h-5 text-gray-500 cursor-help">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
+                            <div class="absolute right-0 w-48 p-2 bg-gray-900 text-white text-sm rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 text-center">
+                                Enable disk quota management for user accounts
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- KissPanel API -->
+                <div class="bg-gray-100 p-4 rounded-lg min-h-[52px]">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="api" checked
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label class="text-sm text-gray-700">KissPanel API</label>
+                        </div>
+                        <div class="relative group">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" 
+                                class="w-5 h-5 text-gray-500 cursor-help">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
+                            <div class="absolute right-0 w-48 p-2 bg-gray-900 text-white text-sm rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 text-center">
+                                Enable API access for automation
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Interactive Install -->
+                <div class="bg-gray-100 p-4 rounded-lg min-h-[52px]">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="interactive" checked
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label class="text-sm text-gray-700">Interactive Install</label>
+                        </div>
+                        <div class="relative group">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" 
+                                class="w-5 h-5 text-gray-500 cursor-help">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
+                            <div class="absolute right-0 w-48 p-2 bg-gray-900 text-white text-sm rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 text-center">
+                                Enable interactive installation process
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Force Installation -->
+                <div class="bg-gray-100 p-4 rounded-lg min-h-[52px]">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="force"
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label class="text-sm text-gray-700">Force Installation</label>
+                        </div>
+                        <div class="relative group">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" 
+                                class="w-5 h-5 text-gray-500 cursor-help">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
+                            <div class="absolute right-0 w-48 p-2 bg-gray-900 text-white text-sm rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 text-center">
+                                Force installation even if system requirements are not met
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Web Server Section -->
+            <div class="border-b-2 border-gray-200 pb-2 mb-6">
+                <h2 class="text-lg font-semibold text-gray-800">Web Server</h2>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                <!-- Nginx -->
+                <div class="bg-gray-100 p-4 rounded-lg min-h-[52px]">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="nginx" checked disabled 
+                                class="rounded border-gray-300 text-gray-400 bg-gray-100">
+                            <label class="text-sm text-gray-700">Nginx</label>
+                        </div>
+                        <div class="relative group">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" 
+                                class="w-5 h-5 text-gray-500 cursor-help">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
+                            <div class="absolute right-0 w-48 p-2 bg-gray-900 text-white text-sm rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 text-center">
+                                High-performance web server and reverse proxy server (required component)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Apache -->
+                <div class="bg-gray-100 p-4 rounded-lg min-h-[52px]">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="apache" checked 
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label class="text-sm text-gray-700">Apache</label>
+                        </div>
+                        <div class="relative group">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" 
+                                class="w-5 h-5 text-gray-500 cursor-help">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
+                            <div class="absolute right-0 w-48 p-2 bg-gray-900 text-white text-sm rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 text-center">
+                                Feature-rich web server with .htaccess support and extensive module system
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PHP-FPM -->
+                <div class="bg-gray-100 p-4 rounded-lg min-h-[52px]">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="phpfpm" checked 
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label class="text-sm text-gray-700">PHP-FPM</label>
+                        </div>
+                        <div class="relative group">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" 
+                                class="w-5 h-5 text-gray-500 cursor-help">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
+                            <div class="absolute right-0 w-48 p-2 bg-gray-900 text-white text-sm rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 text-center">
+                                High-performance PHP FastCGI implementation with advanced process management
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Multi-PHP -->
+                <div class="bg-gray-100 p-4 rounded-lg min-h-[52px]">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="multiphp"
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label class="text-sm text-gray-700">Multi-PHP</label>
+                        </div>
+                        <div class="relative group">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" 
+                                class="w-5 h-5 text-gray-500 cursor-help">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
+                            <div class="absolute right-0 w-48 p-2 bg-gray-900 text-white text-sm rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 text-center">
+                                Install and manage multiple PHP versions (5.6-8.2) for compatibility with different applications
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Database Section -->
+            <div class="border-b-2 border-gray-200 pb-2 mb-6">
+                <h2 class="text-lg font-semibold text-gray-800">Database</h2>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                <!-- SQLite -->
+                <div class="bg-gray-100 p-4 rounded-lg min-h-[52px]">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="sqlite" checked disabled 
+                                class="rounded border-gray-300 text-gray-400 bg-gray-100">
+                            <label class="text-sm text-gray-700">SQLite</label>
+                        </div>
+                        <div class="relative group">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" 
+                                class="w-5 h-5 text-gray-500 cursor-help">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
+                            <div class="absolute right-0 w-48 p-2 bg-gray-900 text-white text-sm rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 text-center">
+                                Lightweight, serverless database for panel operations (required component)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MariaDB -->
+                <div class="bg-gray-100 p-4 rounded-lg min-h-[52px]">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="mariadb" checked 
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label class="text-sm text-gray-700">MariaDB</label>
+                        </div>
+                        <div class="relative group">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" 
+                                class="w-5 h-5 text-gray-500 cursor-help">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
+                            <div class="absolute right-0 w-48 p-2 bg-gray-900 text-white text-sm rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 text-center">
+                                Community-developed fork of MySQL with enhanced features and performance
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MySQL 8 -->
+                <div class="bg-gray-100 p-4 rounded-lg min-h-[52px]">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="mysql8" 
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label class="text-sm text-gray-700">MySQL 8</label>
+                        </div>
+                        <div class="relative group">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" 
+                                class="w-5 h-5 text-gray-500 cursor-help">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
+                            <div class="absolute right-0 w-48 p-2 bg-gray-900 text-white text-sm rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 text-center">
+                                Enterprise-grade database system with improved performance and security features
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PostgreSQL -->
+                <div class="bg-gray-100 p-4 rounded-lg min-h-[52px]">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="postgresql" 
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label class="text-sm text-gray-700">PostgreSQL</label>
+                        </div>
+                        <div class="relative group">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" 
+                                class="w-5 h-5 text-gray-500 cursor-help">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
+                            <div class="absolute right-0 w-48 p-2 bg-gray-900 text-white text-sm rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 text-center">
+                                Advanced object-relational database with strong data integrity and extensibility
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mail Section -->
+            <div class="border-b-2 border-gray-200 pb-2 mb-6">
+                <h2 class="text-lg font-semibold text-gray-800">Mail</h2>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                <!-- Exim -->
+                <div class="bg-gray-100 p-4 rounded-lg min-h-[52px]">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="exim" checked 
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label class="text-sm text-gray-700">Exim</label>
+                        </div>
+                        <div class="relative group">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" 
+                                class="w-5 h-5 text-gray-500 cursor-help">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
+                            <div class="absolute right-0 w-48 p-2 bg-gray-900 text-white text-sm rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 text-center">
+                                Flexible and configurable mail transfer agent (MTA) for handling outgoing mail
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dovecot -->
+                <div class="bg-gray-100 p-4 rounded-lg min-h-[52px]">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="dovecot" checked 
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label class="text-sm text-gray-700">Dovecot</label>
+                        </div>
+                        <div class="relative group">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" 
+                                class="w-5 h-5 text-gray-500 cursor-help">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
+                            <div class="absolute right-0 w-48 p-2 bg-gray-900 text-white text-sm rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 text-center">
+                                Secure IMAP/POP3 server for reliable email delivery and access
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sieve -->
+                <div class="bg-gray-100 p-4 rounded-lg min-h-[52px]">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="sieve" 
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label class="text-sm text-gray-700">Sieve</label>
+                        </div>
+                        <div class="relative group">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" 
+                                class="w-5 h-5 text-gray-500 cursor-help">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
+                            <div class="absolute right-0 w-48 p-2 bg-gray-900 text-white text-sm rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 text-center">
+                                Powerful email filtering and script language for automated mail processing
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ClamAV -->
+                <div class="bg-gray-100 p-4 rounded-lg min-h-[52px]">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="clamav" checked 
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label class="text-sm text-gray-700">ClamAV</label>
+                        </div>
+                        <div class="relative group">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" 
+                                class="w-5 h-5 text-gray-500 cursor-help">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
+                            <div class="absolute right-0 w-48 p-2 bg-gray-900 text-white text-sm rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 text-center">
+                                Robust antivirus engine for detecting trojans, viruses, malware, and other threats
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SpamAssassin -->
+                <div class="bg-gray-100 p-4 rounded-lg min-h-[52px]">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="spamassassin" checked 
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label class="text-sm text-gray-700">SpamAssassin</label>
+                        </div>
+                        <div class="relative group">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" 
+                                class="w-5 h-5 text-gray-500 cursor-help">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
+                            <div class="absolute right-0 w-48 p-2 bg-gray-900 text-white text-sm rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 text-center">
+                                Advanced spam filtering system using machine learning and pattern recognition
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Section -->
+            <div class="border-b-2 border-gray-200 pb-2 mb-6">
+                <h2 class="text-lg font-semibold text-gray-800">Security</h2>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                <!-- IPTables -->
+                <div class="bg-gray-100 p-4 rounded-lg min-h-[52px]">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="iptables" checked 
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label class="text-sm text-gray-700">IPTables</label>
+                        </div>
+                        <div class="relative group">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" 
+                                class="w-5 h-5 text-gray-500 cursor-help">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
+                            <div class="absolute right-0 w-48 p-2 bg-gray-900 text-white text-sm rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 text-center">
+                                Powerful packet filtering and NAT system for network security management
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fail2ban -->
+                <div class="bg-gray-100 p-4 rounded-lg min-h-[52px]">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="fail2ban" checked 
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label class="text-sm text-gray-700">Fail2ban</label>
+                        </div>
+                        <div class="relative group">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" 
+                                class="w-5 h-5 text-gray-500 cursor-help">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
+                            <div class="absolute right-0 w-48 p-2 bg-gray-900 text-white text-sm rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 text-center">
+                                Intrusion prevention system to protect against brute-force and automated attacks
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FTP Server Section -->
+            <div class="border-b-2 border-gray-200 pb-2 mb-6">
+                <h2 class="text-lg font-semibold text-gray-800">FTP Server</h2>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                <!-- VSFTPD -->
+                <div class="bg-gray-100 p-4 rounded-lg min-h-[52px]">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="vsftpd" checked 
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label class="text-sm text-gray-700">VSFTPD</label>
+                        </div>
+                        <div class="relative group">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" 
+                                class="w-5 h-5 text-gray-500 cursor-help">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
+                            <div class="absolute right-0 w-48 p-2 bg-gray-900 text-white text-sm rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 text-center">
+                                Highly secure and efficient FTP server with virtual user support and bandwidth control
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ProFTPD -->
+                <div class="bg-gray-100 p-4 rounded-lg min-h-[52px]">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="proftpd" 
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label class="text-sm text-gray-700">ProFTPD</label>
+                        </div>
+                        <div class="relative group">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" 
+                                class="w-5 h-5 text-gray-500 cursor-help">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
+                            <div class="absolute right-0 w-48 p-2 bg-gray-900 text-white text-sm rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 text-center">
+                                Feature-rich FTP server with advanced access control and configuration options
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DNS Section -->
+            <div class="border-b-2 border-gray-200 pb-2 mb-6">
+                <h2 class="text-lg font-semibold text-gray-800">DNS</h2>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+                <!-- BIND -->
+                <div class="bg-gray-100 p-4 rounded-lg min-h-[52px]">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                            <input type="checkbox" id="bind" checked 
+                                class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                            <label class="text-sm text-gray-700">BIND</label>
+                        </div>
+                        <div class="relative group">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" 
+                                class="w-5 h-5 text-gray-500 cursor-help">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                            </svg>
+                            <div class="absolute right-0 w-48 p-2 bg-gray-900 text-white text-sm rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 text-center">
+                                Industry-standard DNS server for domain name resolution and zone management
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="installer.js"></script>
+</body>
+</html>
