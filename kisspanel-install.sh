@@ -4,8 +4,8 @@
 #                    KissPanel Installer                     #
 #----------------------------------------------------------#
 
-# Version: 0.1.0
-# Build Date: 2024-11-24 23:47:00
+# Version: 0.1.5
+# Build Date: 2024-11-25 00:05:52
 # Website: https://kisspanel.org
 # GitHub: https://github.com/kisspanel/kisspanel
 
@@ -165,7 +165,7 @@ download_configs() {
     log "Downloading configuration files..."
     
     local tmp_dir=$(mktemp -d)
-    local config_version="0.1.4"  # Release version
+    local config_version="0.1.5"  # Release version
     local config_dir="v0.1.0"     # Configs directory version
     local config_url="https://github.com/kisspanel/kisspanel/archive/refs/tags/v${config_version}.tar.gz"
     
@@ -440,6 +440,9 @@ show_usage() {
 install_nginx() {
     log "Installing Nginx web server..."
 
+    # Check requirements first
+    check_nginx_requirements || error "Nginx requirements check failed"
+
     case $OS in
         ubuntu)
             $PACKAGE_UPDATE
@@ -564,6 +567,46 @@ install_sqlite() {
     fi
 
     log "SQLite installation completed"
+}
+
+check_nginx_requirements() {
+    # Check if nginx user exists
+    if ! id -u nginx >/dev/null 2>&1; then
+        useradd -r -d /var/lib/nginx -s /sbin/nologin nginx
+    fi
+
+    # Create required directories
+    mkdir -p /usr/local/kisspanel/ssl
+    mkdir -p /usr/local/kisspanel/web
+    mkdir -p /usr/local/kisspanel/conf/nginx/conf.d
+    mkdir -p /usr/local/kisspanel/conf/nginx/sites-enabled
+
+    # Set correct permissions
+    chown -R root:root /usr/local/kisspanel/ssl
+    chmod 700 /usr/local/kisspanel/ssl
+    chown -R nginx:nginx /usr/local/kisspanel/web
+    chmod 755 /usr/local/kisspanel/web
+
+    # Generate DH parameters if not exists
+    if [ ! -f /usr/local/kisspanel/ssl/dhparam.pem ]; then
+        openssl dhparam -out /usr/local/kisspanel/ssl/dhparam.pem 2048
+    fi
+
+    # Verify all required paths exist
+    local required_paths=(
+        "/etc/nginx/mime.types"
+        "/var/log/nginx"
+        "/var/run/nginx"
+        "/usr/local/kisspanel/ssl/panel.crt"
+        "/usr/local/kisspanel/ssl/panel.key"
+        "/var/run/php-fpm"
+    )
+
+    for path in "${required_paths[@]}"; do
+        if [ ! -e "$path" ]; then
+            error "Required path not found: $path"
+        fi
+    done
 }
 
 install_php() {
@@ -1047,7 +1090,7 @@ validate_os_requirements() {
 #----------------------------------------------------------#
 
 # Version
-VERSION="0.1.0"
+VERSION="0.1.5"
 
 # Set default locale
 export LANG=en_US.UTF-8
