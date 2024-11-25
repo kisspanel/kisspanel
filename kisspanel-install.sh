@@ -5,7 +5,7 @@
 #----------------------------------------------------------#
 
 # Version: 0.1.5
-# Build Date: 2024-11-25 09:08:13
+# Build Date: 2024-11-25 09:20:43
 # Website: https://kisspanel.org
 # GitHub: https://github.com/kisspanel/kisspanel
 
@@ -252,31 +252,50 @@ verify_php_fpm() {
         error "PHP-FPM is not installed"
     fi
     
-    # Create required directories if they don't exist
+    log "Checking PHP-FPM directories..."
+    
+    # Check required directories
     for dir in "/var/run/php-fpm" "/run/php-fpm" "/var/log/php-fpm" "/var/lib/php/session"; do
         if [ ! -d "$dir" ]; then
+            log "Directory missing: $dir"
             mkdir -p "$dir"
             chown nginx:nginx "$dir"
+        else
+            log "Directory exists: $dir"
+            ls -la "$dir"
         fi
     done
+    
+    log "Testing PHP-FPM configuration..."
     
     # Check configuration
     if ! php-fpm -t; then
         error "PHP-FPM configuration test failed"
     fi
     
+    log "Checking PHP-FPM service..."
+    
     # Check if service is running
     if ! systemctl is-active --quiet php-fpm; then
-        # Try to start the service
+        log "PHP-FPM service not running, attempting to start..."
         systemctl start php-fpm
+        sleep 2  # Give it a moment to start
         if ! systemctl is-active --quiet php-fpm; then
+            log "Checking service status..."
+            systemctl status php-fpm
             error "Failed to start PHP-FPM service"
         fi
     fi
     
-    # Check if listening on socket/port (check both possible socket locations)
-    if [ -S /run/php-fpm/www.sock ] || [ -S /var/run/php-fpm/www.sock ]; then
-        log "PHP-FPM is listening on unix socket"
+    log "Checking PHP-FPM socket/port..."
+    
+    # Check if listening on socket/port
+    if [ -S /run/php-fpm/www.sock ]; then
+        log "PHP-FPM is listening on /run/php-fpm/www.sock"
+        ls -la /run/php-fpm/www.sock
+    elif [ -S /var/run/php-fpm/www.sock ]; then
+        log "PHP-FPM is listening on /var/run/php-fpm/www.sock"
+        ls -la /var/run/php-fpm/www.sock
     elif netstat -ln | grep -q "127.0.0.1:9000"; then
         log "PHP-FPM is listening on port 9000"
     else
@@ -740,26 +759,30 @@ install_php() {
                 $PACKAGE_INSTALL epel-release
                 $PACKAGE_INSTALL https://rpms.remirepo.net/enterprise/remi-release-$(rpm -E %{rhel}).rpm
                 $PACKAGE_INSTALL yum-utils
-                dnf module reset php
+                dnf module reset php -y
                 dnf module enable php:remi-$PHP_VERSION -y
             else
                 error "Unsupported AlmaLinux version: $VERSION_ID"
             fi
-            ;;
-        *)
-            error "Unsupported OS: $OS (currently supporting Ubuntu and AlmaLinux only)"
             ;;
     esac
 
     # Install PHP packages
     $PACKAGE_INSTALL $PHP_PACKAGES
 
+    log "Creating PHP-FPM directories..."
+    
     # Create required directories
-    mkdir -p /var/run/php-fpm
-    mkdir -p /var/log/php-fpm
-    mkdir -p /var/lib/php/session
-    mkdir -p /var/lib/php/wsdlcache
+    for dir in "/var/run/php-fpm" "/var/log/php-fpm" "/var/lib/php/session" "/var/lib/php/wsdlcache"; do
+        log "Creating directory: $dir"
+        mkdir -p "$dir"
+        if [ $? -ne 0 ]; then
+            error "Failed to create directory: $dir"
+        fi
+    done
 
+    log "Setting PHP-FPM permissions..."
+    
     # Set proper permissions
     chown -R nginx:nginx /var/run/php-fpm
     chown -R nginx:nginx /var/log/php-fpm
@@ -768,6 +791,8 @@ install_php() {
     chmod 755 /var/log/php-fpm
     chmod 1733 /var/lib/php/session
 
+    log "Creating PHP-FPM symlink..."
+    
     # Create symlink for compatibility
     ln -sf /var/run/php-fpm /run/php-fpm
 
@@ -775,20 +800,16 @@ install_php() {
     mkdir -p $KISSPANEL_DIR/conf/php/fpm/pool.d
     mkdir -p $KISSPANEL_DIR/conf/php/cli
 
-    # Set proper permissions for PHP directories
-    chown -R nginx:nginx /var/lib/php
-    chmod 755 /var/lib/php
-
     # Verify PHP-FPM configuration
     if ! php-fpm -t; then
         error "PHP-FPM configuration test failed"
     fi
 
     # Enable and start PHP-FPM
-    $SERVICE_ENABLE $PHP_SERVICE
-    $SERVICE_START $PHP_SERVICE
+    $SERVICE_ENABLE php-fpm
+    $SERVICE_START php-fpm
 
-    # Verify PHP-FPM installation
+    # Verify installation
     verify_php_fpm
 
     log "PHP-FPM installation completed"
