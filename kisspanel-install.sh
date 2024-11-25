@@ -5,7 +5,7 @@
 #----------------------------------------------------------#
 
 # Version: 0.1.0
-# Build Date: 2024-11-24 23:23:38
+# Build Date: 2024-11-24 23:38:22
 # Website: https://kisspanel.org
 # GitHub: https://github.com/kisspanel/kisspanel
 
@@ -165,7 +165,7 @@ download_configs() {
     log "Downloading configuration files..."
     
     local tmp_dir=$(mktemp -d)
-    local config_version="0.1.0"
+    local config_version="0.1.4"  # Updated to latest version
     local config_url="https://github.com/kisspanel/kisspanel/archive/refs/tags/v${config_version}.tar.gz"
     
     log "Downloading from: $config_url"
@@ -183,21 +183,28 @@ download_configs() {
     # List extracted contents for debugging
     log "Extracted files:"
     ls -la "$tmp_dir"
-    ls -la "$tmp_dir/kisspanel-${config_version}/configs/v0.1.0/nginx"
+    ls -la "$tmp_dir/kisspanel-${config_version}/configs/v${config_version}/nginx"
     
     # Create configuration directories
     mkdir -p "$KISSPANEL_DIR/conf/nginx/sites-available"
     mkdir -p "$KISSPANEL_DIR/conf/nginx/sites-enabled"
     
     local extract_dir="$tmp_dir/kisspanel-${config_version}"
+    local config_dir="v${config_version}"
+    
+    # Check if configs directory exists
+    if [ ! -d "$extract_dir/configs/$config_dir" ]; then
+        rm -rf "$tmp_dir"
+        error "Configuration directory not found in downloaded package"
+    fi
     
     # Copy configurations with verbose logging
     log "Installing configuration files..."
     
     # Copy nginx configurations including sites-available
-    if [ -d "$extract_dir/configs/v0.1.0/nginx" ]; then
+    if [ -d "$extract_dir/configs/$config_dir/nginx" ]; then
         log "Copying nginx configurations..."
-        cp -rv "$extract_dir/configs/v0.1.0/nginx/"* "$KISSPANEL_DIR/conf/nginx/"
+        cp -rv "$extract_dir/configs/$config_dir/nginx/"* "$KISSPANEL_DIR/conf/nginx/"
         
         # Explicitly check for sites-available/default
         if [ ! -f "$KISSPANEL_DIR/conf/nginx/sites-available/default" ]; then
@@ -207,11 +214,11 @@ download_configs() {
         error "Nginx configuration directory not found"
     fi
     
-    # Copy other configurations...
+    # Copy other configurations
     for dir in php panel system; do
-        if [ -d "$extract_dir/configs/v0.1.0/$dir" ]; then
+        if [ -d "$extract_dir/configs/$config_dir/$dir" ]; then
             log "Copying $dir configurations..."
-            cp -rv "$extract_dir/configs/v0.1.0/$dir" "$KISSPANEL_DIR/conf/"
+            cp -rv "$extract_dir/configs/$config_dir/$dir" "$KISSPANEL_DIR/conf/"
         else
             warning "Directory $dir not found in configurations"
         fi
