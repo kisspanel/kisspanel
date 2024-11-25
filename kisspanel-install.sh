@@ -5,7 +5,7 @@
 #----------------------------------------------------------#
 
 # Version: 0.1.5
-# Build Date: 2024-11-25 00:37:03
+# Build Date: 2024-11-25 00:57:06
 # Website: https://kisspanel.org
 # GitHub: https://github.com/kisspanel/kisspanel
 
@@ -656,17 +656,24 @@ install_php() {
 
     # Install PHP repository based on OS
     case $OS in
-        ubuntu|debian)
+        ubuntu)
             $PACKAGE_INSTALL software-properties-common
             add-apt-repository -y ppa:ondrej/php
             $PACKAGE_UPDATE
             ;;
-        centos|rhel|rocky|alma)
-            $PACKAGE_INSTALL epel-release
-            $PACKAGE_INSTALL https://rpms.remirepo.net/enterprise/remi-release-$(rpm -E %{rhel}).rpm
-            $PACKAGE_INSTALL yum-utils
-            dnf module reset php
-            dnf module enable php:remi-$PHP_VERSION
+        almalinux)
+            if [[ "${VERSION_ID%%.*}" == "8" || "${VERSION_ID%%.*}" == "9" ]]; then
+                $PACKAGE_INSTALL epel-release
+                $PACKAGE_INSTALL https://rpms.remirepo.net/enterprise/remi-release-$(rpm -E %{rhel}).rpm
+                $PACKAGE_INSTALL yum-utils
+                dnf module reset php
+                dnf module enable php:remi-$PHP_VERSION
+            else
+                error "Unsupported AlmaLinux version: $VERSION_ID"
+            fi
+            ;;
+        *)
+            error "Unsupported OS: $OS (currently supporting Ubuntu and AlmaLinux only)"
             ;;
     esac
 
@@ -702,7 +709,7 @@ install_apache() {
 
     # Install Apache packages based on OS
     case $OS in
-        ubuntu|debian)
+        ubuntu)
             $PACKAGE_INSTALL $APACHE_PACKAGES
             a2enmod rewrite
             a2enmod ssl
@@ -710,11 +717,19 @@ install_apache() {
             a2enmod proxy_fcgi
             a2enmod headers
             ;;
-        centos|rhel|rocky|alma)
-            $PACKAGE_INSTALL $APACHE_PACKAGES
+        almalinux)
+            if [[ "${VERSION_ID%%.*}" == "8" || "${VERSION_ID%%.*}" == "9" ]]; then
+                $PACKAGE_INSTALL $APACHE_PACKAGES
+                # Enable necessary modules (already compiled in on RHEL-based systems)
+                sed -i 's/#LoadModule ssl_module/LoadModule ssl_module/' /etc/httpd/conf.modules.d/00-ssl.conf
+                sed -i 's/#LoadModule proxy_module/LoadModule proxy_module/' /etc/httpd/conf.modules.d/00-proxy.conf
+                sed -i 's/#LoadModule proxy_fcgi_module/LoadModule proxy_fcgi_module/' /etc/httpd/conf.modules.d/00-proxy.conf
+            else
+                error "Unsupported AlmaLinux version: $VERSION_ID"
+            fi
             ;;
         *)
-            error "Unsupported OS for Apache installation"
+            error "Unsupported OS: $OS (currently supporting Ubuntu and AlmaLinux only)"
             ;;
     esac
 
@@ -1376,7 +1391,6 @@ create_directories() {
 install_core_components() {
     log "Installing core components..."
     install_nginx
-    # configure_nginx
     install_sqlite
     create_system_database
     log "Core components installed successfully"
