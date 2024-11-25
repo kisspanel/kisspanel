@@ -5,7 +5,7 @@
 #----------------------------------------------------------#
 
 # Version: 0.1.5
-# Build Date: 2024-11-25 09:29:23
+# Build Date: 2024-11-25 09:47:39
 # Website: https://kisspanel.org
 # GitHub: https://github.com/kisspanel/kisspanel
 
@@ -252,6 +252,16 @@ verify_php_fpm() {
         error "PHP-FPM is not installed"
     fi
     
+    log "Checking PHP-FPM configuration files..."
+    # Verify configuration files
+    for conf in "/usr/local/kisspanel/conf/php/fpm/php-fpm.conf" \
+            "/usr/local/kisspanel/conf/php/fpm/pool.d/www.conf" \
+            "/usr/local/kisspanel/conf/php/php.ini"; do
+        if [ ! -f "$conf" ]; then
+            error "Missing PHP configuration file: $conf"
+        fi
+    done
+
     log "Checking PHP-FPM directories..."
     
     # Check required directories
@@ -772,7 +782,7 @@ install_php() {
     log "Creating PHP-FPM directories..."
     
     # Create required directories
-    for dir in "/var/run/php-fpm" "/var/log/php-fpm" "/var/lib/php/session" "/var/lib/php/wsdlcache"; do
+    for dir in "/var/run/php-fpm" "/var/log/php-fpm" "/var/lib/php/session" "/var/lib/php/wsdlcache" "/var/lib/php/session/panel"; do
         log "Creating directory: $dir"
         mkdir -p "$dir"
         if [ $? -ne 0 ]; then
@@ -789,6 +799,7 @@ install_php() {
     chmod 755 /var/run/php-fpm
     chmod 755 /var/log/php-fpm
     chmod 1733 /var/lib/php/session
+    chmod 1733 /var/lib/php/session/panel
 
     log "Creating PHP-FPM symlink..."
     
@@ -798,6 +809,21 @@ install_php() {
     # Create PHP-FPM configuration directories
     mkdir -p $KISSPANEL_DIR/conf/php/fpm/pool.d
     mkdir -p $KISSPANEL_DIR/conf/php/cli
+
+    # Verify configuration files exist
+    for conf in "/usr/local/kisspanel/conf/php/fpm/php-fpm.conf" \
+               "/usr/local/kisspanel/conf/php/fpm/pool.d/www.conf" \
+               "/usr/local/kisspanel/conf/php/php.ini"; do
+        if [ ! -f "$conf" ]; then
+            error "Missing PHP configuration file: $conf"
+        fi
+    done
+
+    # Create symlinks for PHP configurations
+    ln -sf "$KISSPANEL_DIR/conf/php/php.ini" /etc/php.ini
+    ln -sf "$KISSPANEL_DIR/conf/php/fpm/php-fpm.conf" /etc/php-fpm.conf
+    ln -sf "$KISSPANEL_DIR/conf/php/fpm/pool.d/www.conf" /etc/php-fpm.d/www.conf
+    ln -sf "$KISSPANEL_DIR/conf/panel/php-fpm.conf" /etc/php-fpm.d/panel.conf
 
     # Verify PHP-FPM configuration
     if ! php-fpm -t; then
