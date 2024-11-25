@@ -5,7 +5,7 @@
 #----------------------------------------------------------#
 
 # Version: 0.1.5
-# Build Date: 2024-11-25 08:59:57
+# Build Date: 2024-11-25 09:08:13
 # Website: https://kisspanel.org
 # GitHub: https://github.com/kisspanel/kisspanel
 
@@ -252,6 +252,14 @@ verify_php_fpm() {
         error "PHP-FPM is not installed"
     fi
     
+    # Create required directories if they don't exist
+    for dir in "/var/run/php-fpm" "/run/php-fpm" "/var/log/php-fpm" "/var/lib/php/session"; do
+        if [ ! -d "$dir" ]; then
+            mkdir -p "$dir"
+            chown nginx:nginx "$dir"
+        fi
+    done
+    
     # Check configuration
     if ! php-fpm -t; then
         error "PHP-FPM configuration test failed"
@@ -266,8 +274,8 @@ verify_php_fpm() {
         fi
     fi
     
-    # Check if listening on socket/port
-    if [ -S /run/php-fpm/www.sock ]; then
+    # Check if listening on socket/port (check both possible socket locations)
+    if [ -S /run/php-fpm/www.sock ] || [ -S /var/run/php-fpm/www.sock ]; then
         log "PHP-FPM is listening on unix socket"
     elif netstat -ln | grep -q "127.0.0.1:9000"; then
         log "PHP-FPM is listening on port 9000"
@@ -745,6 +753,23 @@ install_php() {
 
     # Install PHP packages
     $PACKAGE_INSTALL $PHP_PACKAGES
+
+    # Create required directories
+    mkdir -p /var/run/php-fpm
+    mkdir -p /var/log/php-fpm
+    mkdir -p /var/lib/php/session
+    mkdir -p /var/lib/php/wsdlcache
+
+    # Set proper permissions
+    chown -R nginx:nginx /var/run/php-fpm
+    chown -R nginx:nginx /var/log/php-fpm
+    chown -R nginx:nginx /var/lib/php
+    chmod 755 /var/run/php-fpm
+    chmod 755 /var/log/php-fpm
+    chmod 1733 /var/lib/php/session
+
+    # Create symlink for compatibility
+    ln -sf /var/run/php-fpm /run/php-fpm
 
     # Create PHP-FPM configuration directories
     mkdir -p $KISSPANEL_DIR/conf/php/fpm/pool.d
