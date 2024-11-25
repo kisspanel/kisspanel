@@ -5,7 +5,7 @@
 #----------------------------------------------------------#
 
 # Version: 0.1.5
-# Build Date: 2024-11-25 00:17:56
+# Build Date: 2024-11-25 00:24:43
 # Website: https://kisspanel.org
 # GitHub: https://github.com/kisspanel/kisspanel
 
@@ -439,6 +439,28 @@ show_usage() {
 
 install_nginx() {
     log "Installing Nginx web server..."
+
+    # Debug: Check initial state
+    log "Checking for /run/nginx and /var/run/nginx..."
+    ls -la /run/nginx 2>/dev/null || log "Warning: /run/nginx does not exist"
+    ls -la /var/run/nginx 2>/dev/null || log "Warning: /var/run/nginx does not exist"
+
+    # Create nginx runtime directory
+    log "Creating /run/nginx directory..."
+    mkdir -p /run/nginx
+    if [ $? -ne 0 ]; then
+        log "Error creating /run/nginx. Checking permissions..."
+        ls -la /run
+    fi
+
+    # Verify directory creation
+    log "Verifying /run/nginx creation..."
+    ls -la /run/nginx || error "Failed to create /run/nginx directory"
+
+    # Set permissions
+    log "Setting permissions for /run/nginx..."
+    chown nginx:nginx /run/nginx
+    chmod 755 /run/nginx
 
     # Check requirements first
     check_nginx_requirements || error "Nginx requirements check failed"
