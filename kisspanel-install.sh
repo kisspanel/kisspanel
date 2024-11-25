@@ -5,7 +5,7 @@
 #----------------------------------------------------------#
 
 # Version: 0.1.0
-# Build Date: 2024-11-24 21:11:16
+# Build Date: 2024-11-24 21:25:17
 # Website: https://kisspanel.org
 # GitHub: https://github.com/kisspanel/kisspanel
 
@@ -108,7 +108,7 @@ install_dependencies() {
 check_memory() {
     local total_mem=$(free -m | awk '/^Mem:/{print $2}')
     if [ $total_mem -lt 1024 ]; then
-        warning "Less than 1GB of RAM detected. This might affect performance."
+        warning "Only ${total_mem}MB RAM detected. Minimum recommended is 1024MB"
     fi
 }
 
@@ -124,7 +124,7 @@ check_disk_space() {
 check_cpu() {
     local cpu_cores=$(nproc)
     if [ "$cpu_cores" -lt 2 ]; then
-        warning "Less than 2 CPU cores detected. This might affect performance."
+        warning "Only ${cpu_cores} CPU core(s) detected. Minimum recommended is 2 cores"
     fi
 }
 
@@ -163,46 +163,46 @@ download_configs() {
     log "Downloading configuration files..."
     
     local tmp_dir=$(mktemp -d)
-    local config_version="0.1.3"  # We can make this dynamic later
+    local config_version="0.1.3"
     local config_url="https://github.com/kisspanel/kisspanel/archive/refs/tags/v${config_version}.tar.gz"
     
-    # Download configurations
     log "Downloading from: $config_url"
     if ! curl -sSL "$config_url" -o "$tmp_dir/configs.tar.gz"; then
         rm -rf "$tmp_dir"
-        error "Failed to download configuration files"
+        error "Failed to download configuration files from $config_url"
     fi
     
-    # Extract configurations
+    log "Extracting configuration files..."
     if ! tar xzf "$tmp_dir/configs.tar.gz" -C "$tmp_dir"; then
         rm -rf "$tmp_dir"
         error "Failed to extract configuration files"
     fi
     
+    # List extracted contents for debugging
+    log "Extracted files:"
+    ls -la "$tmp_dir"
+    
     # Create configuration directories
     mkdir -p "$KISSPANEL_DIR/conf"
     
-    # The extracted directory will be named kisspanel-0.1.3
     local extract_dir="$tmp_dir/kisspanel-${config_version}"
     
-    # Copy configurations to proper locations
+    # Check if configs directory exists
+    if [ ! -d "$extract_dir/configs" ]; then
+        rm -rf "$tmp_dir"
+        error "Configuration directory not found in downloaded package"
+    fi
+    
+    # Copy configurations with verbose logging
     log "Installing configuration files..."
-    
-    # Copy main configurations
-    cp -r "$extract_dir/configs/nginx" "$KISSPANEL_DIR/conf/"
-    cp -r "$extract_dir/configs/php" "$KISSPANEL_DIR/conf/"
-    cp -r "$extract_dir/configs/panel" "$KISSPANEL_DIR/conf/"
-    
-    # Copy system configurations
-    if [ -d "$extract_dir/configs/system/cron.d" ]; then
-        cp -r "$extract_dir/configs/system/cron.d/"* "/etc/cron.d/"
-        chmod 644 /etc/cron.d/kisspanel
-    fi
-    
-    if [ -d "$extract_dir/configs/system/fail2ban" ]; then
-        cp -r "$extract_dir/configs/system/fail2ban/"* "/etc/fail2ban/"
-        chmod 644 /etc/fail2ban/jail.d/kisspanel.conf
-    fi
+    for dir in nginx php panel system; do
+        if [ -d "$extract_dir/configs/$dir" ]; then
+            log "Copying $dir configurations..."
+            cp -rv "$extract_dir/configs/$dir" "$KISSPANEL_DIR/conf/"
+        else
+            warning "Directory $dir not found in configurations"
+        fi
+    done
     
     # Set proper permissions
     chown -R root:root "$KISSPANEL_DIR/conf"
@@ -847,42 +847,16 @@ interactive_setup() {
     
     # Email
     if [ -z "$EMAIL" ]; then
-        read -p "Enter admin email: " input_email
-        while [[ ! "$input_email" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]; do
-            echo "Invalid email format"
-            read -p "Enter admin email: " input_email
-        done
-        EMAIL=$input_email
+        default_email="root@$HOSTNAME"
+        read -p "Enter admin email (default: $default_email): " input_email
+        EMAIL=${input_email:-$default_email}
     fi
     
-    # Password - only prompt if --password was not used
-    if [ -z "$PASSWORD" ] && [ "$INTERACTIVE" = "yes" ]; then
-        read -s -p "Enter admin password (press Enter to generate random): " input_password
-        echo
-        if [ -n "$input_password" ]; then
-            read -s -p "Confirm admin password: " confirm_password
-            echo
-            while [[ "$input_password" != "$confirm_password" ]]; do
-                echo "Passwords do not match"
-                read -s -p "Enter admin password: " input_password
-                echo
-                read -s -p "Confirm admin password: " confirm_password
-                echo
-            done
-            PASSWORD=$input_password
-        else
-            # Generate random password
-            PASSWORD=$(generate_password 16)
-            echo "Generated random password: $PASSWORD"
-            echo "Please save this password!"
-            echo
-        fi
-    elif [ -z "$PASSWORD" ]; then
-        # Generate random password for non-interactive mode
+    # Password - only generate if not provided via CLI
+    if [ -z "$PASSWORD" ]; then
         PASSWORD=$(generate_password 16)
-        echo "Generated random password: $PASSWORD"
-        echo "Please save this password!"
-        echo
+        log "Generated admin password: $PASSWORD"
+        log "Please save this password!"
     fi
     
     log "Interactive setup completed"
