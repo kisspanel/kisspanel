@@ -5,7 +5,7 @@
 #----------------------------------------------------------#
 
 # Version: 0.1.5
-# Build Date: 2024-11-25 08:56:09
+# Build Date: 2024-11-25 08:59:57
 # Website: https://kisspanel.org
 # GitHub: https://github.com/kisspanel/kisspanel
 
@@ -250,7 +250,7 @@ verify_php_fpm() {
     # Check if php-fpm is installed
     if ! command -v php-fpm >/dev/null 2>&1; then
         error "PHP-FPM is not installed"
-    }
+    fi
     
     # Check configuration
     if ! php-fpm -t; then
