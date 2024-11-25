@@ -5,7 +5,7 @@
 #----------------------------------------------------------#
 
 # Version: 0.1.5
-# Build Date: 2024-11-25 09:20:43
+# Build Date: 2024-11-25 09:29:23
 # Website: https://kisspanel.org
 # GitHub: https://github.com/kisspanel/kisspanel
 
@@ -730,7 +730,6 @@ check_nginx_requirements() {
         "/var/run/nginx"
         "/usr/local/kisspanel/ssl/panel.crt"
         "/usr/local/kisspanel/ssl/panel.key"
-        "/var/run/php-fpm"
     )
 
     for path in "${required_paths[@]}"; do
