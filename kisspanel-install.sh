@@ -5,7 +5,7 @@
 #----------------------------------------------------------#
 
 # Version: 0.1.0
-# Build Date: 2024-11-24 21:25:17
+# Build Date: 2024-11-24 22:12:29
 # Website: https://kisspanel.org
 # GitHub: https://github.com/kisspanel/kisspanel
 
@@ -92,10 +92,12 @@ install_dependencies() {
     case $OS in
         ubuntu|debian)
             $PACKAGE_UPDATE
+            install_locale
             $PACKAGE_INSTALL curl wget tar unzip git lsof rsync
             ;;
         almalinux|rocky)
             $PACKAGE_UPDATE
+            install_locale
             $PACKAGE_INSTALL curl wget tar unzip git lsof rsync
             ;;
         *)
@@ -234,6 +236,31 @@ check_selinux() {
             warning "SELinux is enabled. This might affect panel functionality."
         fi
     fi
+}
+
+handle_selinux() {
+    if command -v getenforce >/dev/null 2>&1; then
+        if [ "$(getenforce)" = "Enforcing" ]; then
+            log "SELinux is in enforcing mode. Setting to permissive..."
+            setenforce 0
+            # Make it permanent
+            sed -i 's/^SELINUX=enforcing/SELINUX=permissive/' /etc/selinux/config
+            log "SELinux set to permissive mode"
+        fi
+    fi
+}
+
+install_locale() {
+    log "Setting up system locale..."
+    case $OS in
+        almalinux|rocky)
+            $PACKAGE_INSTALL glibc-langpack-en
+            ;;
+        ubuntu)
+            $PACKAGE_INSTALL locales
+            locale-gen en_US.UTF-8
+            ;;
+    esac
 }
 
 # Verify network configuration
@@ -1220,6 +1247,10 @@ validate_os_requirements() {
 # Version
 VERSION="0.1.0"
 
+# Set default locale
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+
 # Set working directory
 INSTALLER_DIR=$(dirname $(readlink -f $0))
 KISSPANEL_DIR="/usr/local/kisspanel"
@@ -1437,7 +1468,7 @@ pre_install() {
     check_disk_space
     check_cpu
     check_network
-    check_selinux
+    handle_selinux
     check_existing_panel
     check_ports
     create_directories
