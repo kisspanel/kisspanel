@@ -5,7 +5,7 @@
 #----------------------------------------------------------#
 
 # Version: 0.1.0
-# Build Date: 2024-11-24 22:12:29
+# Build Date: 2024-11-24 22:18:27
 # Website: https://kisspanel.org
 # GitHub: https://github.com/kisspanel/kisspanel
 
@@ -436,10 +436,14 @@ install_nginx() {
     mkdir -p /var/log/nginx
     mkdir -p /var/www/html
 
-    # Copy and configure Nginx configuration
-    cp $INSTALLER_DIR/conf/nginx/nginx.conf $KISSPANEL_DIR/conf/nginx/
-    cp $INSTALLER_DIR/conf/nginx/fastcgi_params $KISSPANEL_DIR/conf/nginx/
-    cp $INSTALLER_DIR/conf/nginx/proxy_params $KISSPANEL_DIR/conf/nginx/
+    # Download configurations first
+    log "Downloading configurations..."
+    download_configs
+
+    # Now copy from our downloaded configs
+    if [ ! -f "$KISSPANEL_DIR/conf/nginx/nginx.conf" ]; then
+        error "Nginx configuration files not found after download"
+    fi
 
     # Create symbolic link for Nginx configuration
     if [ -f /etc/nginx/nginx.conf ]; then
@@ -448,7 +452,6 @@ install_nginx() {
     ln -sf $KISSPANEL_DIR/conf/nginx/nginx.conf /etc/nginx/nginx.conf
 
     # Configure default website
-    cp $INSTALLER_DIR/conf/nginx/default.conf $KISSPANEL_DIR/conf/nginx/sites-available/default
     ln -sf $KISSPANEL_DIR/conf/nginx/sites-available/default $KISSPANEL_DIR/conf/nginx/sites-enabled/
 
     # Set proper permissions
