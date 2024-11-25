@@ -5,7 +5,7 @@
 #----------------------------------------------------------#
 
 # Version: 0.1.5
-# Build Date: 2024-11-25 08:32:19
+# Build Date: 2024-11-25 08:56:09
 # Website: https://kisspanel.org
 # GitHub: https://github.com/kisspanel/kisspanel
 
@@ -243,6 +243,41 @@ check_existing_panel() {
     done
 }
 
+# Verify PHP-FPM installation and configuration
+verify_php_fpm() {
+    log "Verifying PHP-FPM installation..."
+    
+    # Check if php-fpm is installed
+    if ! command -v php-fpm >/dev/null 2>&1; then
+        error "PHP-FPM is not installed"
+    }
+    
+    # Check configuration
+    if ! php-fpm -t; then
+        error "PHP-FPM configuration test failed"
+    fi
+    
+    # Check if service is running
+    if ! systemctl is-active --quiet php-fpm; then
+        # Try to start the service
+        systemctl start php-fpm
+        if ! systemctl is-active --quiet php-fpm; then
+            error "Failed to start PHP-FPM service"
+        fi
+    fi
+    
+    # Check if listening on socket/port
+    if [ -S /run/php-fpm/www.sock ]; then
+        log "PHP-FPM is listening on unix socket"
+    elif netstat -ln | grep -q "127.0.0.1:9000"; then
+        log "PHP-FPM is listening on port 9000"
+    else
+        error "PHP-FPM is not listening on expected socket/port"
+    fi
+    
+    log "PHP-FPM verification completed"
+}
+
 verify_ssl_cert() {
     if [ ! -f "$KISSPANEL_DIR/ssl/panel.crt" ] || [ ! -f "$KISSPANEL_DIR/ssl/panel.key" ]; then
         error "SSL certificate files not found"
@@ -417,6 +452,73 @@ show_usage() {
 }
 
 # components functions
+install_sqlite() {
+    log "Installing SQLite..."
+
+    # Install SQLite packages based on OS
+    case $OS in
+        ubuntu)
+            $PACKAGE_INSTALL sqlite3 libsqlite3-dev
+            ;;
+        almalinux)
+            if [[ "${VERSION_ID%%.*}" == "8" || "${VERSION_ID%%.*}" == "9" ]]; then
+                $PACKAGE_INSTALL sqlite sqlite-devel
+            else
+                error "Unsupported AlmaLinux version: $VERSION_ID"
+            fi
+            ;;
+        *)
+            error "Unsupported OS: $OS (currently supporting Ubuntu and AlmaLinux only)"
+            ;;
+    esac
+
+    # Create database directory
+    mkdir -p $KISSPANEL_DIR/data
+    chmod 750 $KISSPANEL_DIR/data
+
+    # Test SQLite installation
+    if ! sqlite3 --version >/dev/null 2>&1; then
+        error "SQLite installation failed"
+    fi
+
+    log "SQLite installation completed"
+}
+
+create_system_database() {
+    log "Creating system database..."
+    
+    # Create database directory if it doesn't exist
+    mkdir -p "$KISSPANEL_DIR/data"
+    chmod 750 "$KISSPANEL_DIR/data"
+    
+    # Check if schema file exists
+    local SCHEMA_FILE="$KISSPANEL_DIR/conf/panel/schema.sql"
+    if [ ! -f "$SCHEMA_FILE" ]; then
+        error "Database schema file not found: $SCHEMA_FILE"
+    fi
+    
+    # Create database
+    local DB_FILE="$KISSPANEL_DIR/data/kisspanel.db"
+    sqlite3 "$DB_FILE" < "$SCHEMA_FILE"
+    
+    if [ $? -ne 0 ]; then
+        error "Failed to create database"
+    fi
+    
+    # Set permissions
+    chown root:root "$DB_FILE"
+    chmod 600 "$DB_FILE"
+    
+    # Insert initial data
+    local QUERY="INSERT INTO users (username, password, email, role) VALUES ('admin', '${ADMIN_PASSWORD_HASH}', '${ADMIN_EMAIL}', 'admin');"
+    sqlite3 "$DB_FILE" "$QUERY"
+    
+    if [ $? -ne 0 ]; then
+        error "Failed to create admin user"
+    fi
+    
+    log "System database created successfully"
+}
 
 # components functions
 
@@ -571,38 +673,6 @@ install_nginx() {
     log "Nginx installation completed"
 }
 
-install_sqlite() {
-    log "Installing SQLite..."
-
-    # Install SQLite packages based on OS
-    case $OS in
-        ubuntu)
-            $PACKAGE_INSTALL sqlite3 libsqlite3-dev
-            ;;
-        almalinux)
-            if [[ "${VERSION_ID%%.*}" == "8" || "${VERSION_ID%%.*}" == "9" ]]; then
-                $PACKAGE_INSTALL sqlite sqlite-devel
-            else
-                error "Unsupported AlmaLinux version: $VERSION_ID"
-            fi
-            ;;
-        *)
-            error "Unsupported OS: $OS (currently supporting Ubuntu and AlmaLinux only)"
-            ;;
-    esac
-
-    # Create database directory
-    mkdir -p $KISSPANEL_DIR/data
-    chmod 750 $KISSPANEL_DIR/data
-
-    # Test SQLite installation
-    if ! sqlite3 --version >/dev/null 2>&1; then
-        error "SQLite installation failed"
-    fi
-
-    log "SQLite installation completed"
-}
-
 check_nginx_requirements() {
     # Check if nginx user exists
     if ! id -u nginx >/dev/null 2>&1; then
@@ -663,7 +733,7 @@ install_php() {
                 $PACKAGE_INSTALL https://rpms.remirepo.net/enterprise/remi-release-$(rpm -E %{rhel}).rpm
                 $PACKAGE_INSTALL yum-utils
                 dnf module reset php
-                dnf module enable php:remi-$PHP_VERSION
+                dnf module enable php:remi-$PHP_VERSION -y
             else
                 error "Unsupported AlmaLinux version: $VERSION_ID"
             fi
@@ -692,6 +762,9 @@ install_php() {
     # Enable and start PHP-FPM
     $SERVICE_ENABLE $PHP_SERVICE
     $SERVICE_START $PHP_SERVICE
+
+    # Verify PHP-FPM installation
+    verify_php_fpm
 
     log "PHP-FPM installation completed"
 }
