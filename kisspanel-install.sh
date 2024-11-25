@@ -5,7 +5,7 @@
 #----------------------------------------------------------#
 
 # Version: 0.1.5
-# Build Date: 2024-11-25 08:14:19
+# Build Date: 2024-11-25 08:32:19
 # Website: https://kisspanel.org
 # GitHub: https://github.com/kisspanel/kisspanel
 
@@ -165,9 +165,7 @@ download_configs() {
     log "Downloading configuration files..."
     
     local tmp_dir=$(mktemp -d)
-    local config_version="0.1.5"  # Release version
-    local config_dir="v0.1.0"     # Configs directory version
-    local config_url="https://github.com/kisspanel/kisspanel/archive/refs/tags/v${config_version}.tar.gz"
+    local config_url="https://raw.githubusercontent.com/kisspanel/kisspanel/main/configs/config.tar.gz"
     
     log "Downloading from: $config_url"
     if ! curl -sSL "$config_url" -o "$tmp_dir/configs.tar.gz"; then
@@ -184,16 +182,14 @@ download_configs() {
     # List extracted contents for debugging
     log "Extracted files:"
     ls -la "$tmp_dir"
-    ls -la "$tmp_dir/kisspanel-${config_version}/configs/${config_dir}/nginx"
+    ls -la "$tmp_dir/nginx"
     
     # Create configuration directories
     mkdir -p "$KISSPANEL_DIR/conf/nginx/sites-available"
     mkdir -p "$KISSPANEL_DIR/conf/nginx/sites-enabled"
     
-    local extract_dir="$tmp_dir/kisspanel-${config_version}"
-    
     # Check if configs directory exists
-    if [ ! -d "$extract_dir/configs/${config_dir}" ]; then
+    if [ ! -d "$tmp_dir/nginx" ]; then
         rm -rf "$tmp_dir"
         error "Configuration directory not found in downloaded package"
     fi
@@ -202,9 +198,9 @@ download_configs() {
     log "Installing configuration files..."
     
     # Copy nginx configurations including sites-available
-    if [ -d "$extract_dir/configs/${config_dir}/nginx" ]; then
+    if [ -d "$tmp_dir/nginx" ]; then
         log "Copying nginx configurations..."
-        cp -rv "$extract_dir/configs/${config_dir}/nginx/"* "$KISSPANEL_DIR/conf/nginx/"
+        cp -rv "$tmp_dir/nginx/"* "$KISSPANEL_DIR/conf/nginx/"
         
         # Explicitly check for sites-available/default
         if [ ! -f "$KISSPANEL_DIR/conf/nginx/sites-available/default" ]; then
@@ -216,9 +212,9 @@ download_configs() {
     
     # Copy other configurations
     for dir in php panel system; do
-        if [ -d "$extract_dir/configs/${config_dir}/$dir" ]; then
+        if [ -d "$tmp_dir/$dir" ]; then
             log "Copying $dir configurations..."
-            cp -rv "$extract_dir/configs/${config_dir}/$dir" "$KISSPANEL_DIR/conf/"
+            cp -rv "$tmp_dir/$dir" "$KISSPANEL_DIR/conf/"
         else
             warning "Directory $dir not found in configurations"
         fi
