@@ -5,7 +5,7 @@
 #----------------------------------------------------------#
 
 # Version: 0.1.5
-# Build Date: 2024-11-25 00:24:43
+# Build Date: 2024-11-25 00:37:03
 # Website: https://kisspanel.org
 # GitHub: https://github.com/kisspanel/kisspanel
 
@@ -580,14 +580,18 @@ install_sqlite() {
 
     # Install SQLite packages based on OS
     case $OS in
-        ubuntu|debian)
+        ubuntu)
             $PACKAGE_INSTALL sqlite3 libsqlite3-dev
             ;;
-        centos|rhel|rocky|alma)
-            $PACKAGE_INSTALL sqlite sqlite-devel
+        almalinux)
+            if [[ "${VERSION_ID%%.*}" == "8" || "${VERSION_ID%%.*}" == "9" ]]; then
+                $PACKAGE_INSTALL sqlite sqlite-devel
+            else
+                error "Unsupported AlmaLinux version: $VERSION_ID"
+            fi
             ;;
         *)
-            error "Unsupported OS for SQLite installation"
+            error "Unsupported OS: $OS (currently supporting Ubuntu and AlmaLinux only)"
             ;;
     esac
 
@@ -1372,7 +1376,7 @@ create_directories() {
 install_core_components() {
     log "Installing core components..."
     install_nginx
-    configure_nginx
+    # configure_nginx
     install_sqlite
     create_system_database
     log "Core components installed successfully"
