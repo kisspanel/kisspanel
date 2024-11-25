@@ -5,7 +5,7 @@
 #----------------------------------------------------------#
 
 # Version: 0.1.5
-# Build Date: 2024-11-25 00:05:52
+# Build Date: 2024-11-25 00:17:56
 # Website: https://kisspanel.org
 # GitHub: https://github.com/kisspanel/kisspanel
 
@@ -460,10 +460,16 @@ install_nginx() {
             ;;
     esac
 
+    # Debug: Check if nginx was installed properly
+    log "Checking nginx installation..."
+    rpm -qa | grep nginx || log "Warning: No nginx packages found"
+    
     # Create directory structure
     mkdir -p $KISSPANEL_DIR/conf/nginx/{conf.d,sites-available,sites-enabled}
     mkdir -p /var/log/nginx
     mkdir -p /var/www/html
+    mkdir -p /run/nginx
+    chown nginx:nginx /run/nginx
 
     # Create SSL directory and generate self-signed certificate
     mkdir -p $KISSPANEL_DIR/ssl
@@ -521,6 +527,12 @@ install_nginx() {
     # Set proper permissions for web directories
     chown -R nginx:nginx /var/www/html
     chmod 755 /var/www/html
+
+    # Debug: List key directories
+    log "Checking directory structure..."
+    ls -la /run/nginx || log "Warning: /run/nginx not found"
+    ls -la /var/log/nginx || log "Warning: /var/log/nginx not found"
+    ls -la $KISSPANEL_DIR/conf/nginx || log "Warning: Panel nginx conf dir not found"
 
     # Enable and start Nginx
     $SERVICE_ENABLE nginx
