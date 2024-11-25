@@ -5,7 +5,7 @@
 #----------------------------------------------------------#
 
 # Version: 0.1.0
-# Build Date: 2024-11-24 15:40:53
+# Build Date: 2024-11-24 21:11:16
 # Website: https://kisspanel.org
 # GitHub: https://github.com/kisspanel/kisspanel
 
@@ -47,7 +47,6 @@ check_root() {
 }
 
 # Detect and validate OS
-# Detect and validate OS
 detect_os() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
@@ -72,6 +71,37 @@ detect_os() {
     else
         error "Cannot determine OS version"
     fi
+}
+
+# Check if required ports are available
+check_ports() {
+    log "Checking required ports..."
+    local ports=(80 443 $PORT 25 110 143 993 995)
+    
+    for port in "${ports[@]}"; do
+        if netstat -tuln | grep -q ":$port "; then
+            error "Port $port is already in use"
+        fi
+    done
+}
+
+# Install basic dependencies
+install_dependencies() {
+    log "Installing basic dependencies..."
+    
+    case $OS in
+        ubuntu|debian)
+            $PACKAGE_UPDATE
+            $PACKAGE_INSTALL curl wget tar unzip git lsof rsync
+            ;;
+        almalinux|rocky)
+            $PACKAGE_UPDATE
+            $PACKAGE_INSTALL curl wget tar unzip git lsof rsync
+            ;;
+        *)
+            error "Unsupported OS for dependency installation"
+            ;;
+    esac
 }
 
 # Check system memory
@@ -355,13 +385,12 @@ show_usage() {
 install_nginx() {
     log "Installing Nginx web server..."
 
-    # Install Nginx packages based on OS
     case $OS in
-        ubuntu|debian)
+        ubuntu)
             $PACKAGE_UPDATE
             $PACKAGE_INSTALL $NGINX_PACKAGES
             ;;
-        centos|rhel|rocky|alma)
+        almalinux|rocky)
             # Enable EPEL if needed
             if ! rpm -qa | grep -q epel-release; then
                 $PACKAGE_INSTALL epel-release
@@ -826,20 +855,34 @@ interactive_setup() {
         EMAIL=$input_email
     fi
     
-    # Password
-    if [ -z "$PASSWORD" ]; then
-        read -s -p "Enter admin password: " input_password
+    # Password - only prompt if --password was not used
+    if [ -z "$PASSWORD" ] && [ "$INTERACTIVE" = "yes" ]; then
+        read -s -p "Enter admin password (press Enter to generate random): " input_password
         echo
-        read -s -p "Confirm admin password: " confirm_password
-        echo
-        while [[ "$input_password" != "$confirm_password" ]]; do
-            echo "Passwords do not match"
-            read -s -p "Enter admin password: " input_password
-            echo
+        if [ -n "$input_password" ]; then
             read -s -p "Confirm admin password: " confirm_password
             echo
-        done
-        PASSWORD=$input_password
+            while [[ "$input_password" != "$confirm_password" ]]; do
+                echo "Passwords do not match"
+                read -s -p "Enter admin password: " input_password
+                echo
+                read -s -p "Confirm admin password: " confirm_password
+                echo
+            done
+            PASSWORD=$input_password
+        else
+            # Generate random password
+            PASSWORD=$(generate_password 16)
+            echo "Generated random password: $PASSWORD"
+            echo "Please save this password!"
+            echo
+        fi
+    elif [ -z "$PASSWORD" ]; then
+        # Generate random password for non-interactive mode
+        PASSWORD=$(generate_password 16)
+        echo "Generated random password: $PASSWORD"
+        echo "Please save this password!"
+        echo
     fi
     
     log "Interactive setup completed"
