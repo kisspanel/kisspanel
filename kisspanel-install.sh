@@ -5,7 +5,7 @@
 #----------------------------------------------------------#
 
 # Version: 0.1.0
-# Build Date: 2024-11-24 23:11:40
+# Build Date: 2024-11-24 23:23:38
 # Website: https://kisspanel.org
 # GitHub: https://github.com/kisspanel/kisspanel
 
@@ -165,7 +165,7 @@ download_configs() {
     log "Downloading configuration files..."
     
     local tmp_dir=$(mktemp -d)
-    local config_version="0.1.0"  # Changed from 0.1.3 to 0.1.0
+    local config_version="0.1.0"
     local config_url="https://github.com/kisspanel/kisspanel/archive/refs/tags/v${config_version}.tar.gz"
     
     log "Downloading from: $config_url"
@@ -183,23 +183,33 @@ download_configs() {
     # List extracted contents for debugging
     log "Extracted files:"
     ls -la "$tmp_dir"
-    ls -la "$tmp_dir/kisspanel-${config_version}/configs"  # Added this line for more debug info
+    ls -la "$tmp_dir/kisspanel-${config_version}/configs/v0.1.0/nginx"
     
     # Create configuration directories
-    mkdir -p "$KISSPANEL_DIR/conf"
+    mkdir -p "$KISSPANEL_DIR/conf/nginx/sites-available"
+    mkdir -p "$KISSPANEL_DIR/conf/nginx/sites-enabled"
     
     local extract_dir="$tmp_dir/kisspanel-${config_version}"
     
-    # Check if configs directory exists
-    if [ ! -d "$extract_dir/configs" ]; then
-        rm -rf "$tmp_dir"
-        error "Configuration directory not found in downloaded package"
-    fi
-    
     # Copy configurations with verbose logging
     log "Installing configuration files..."
-    for dir in nginx php panel system; do
-        if [ -d "$extract_dir/configs/v0.1.0/$dir" ]; then  # Updated path to include v0.1.0
+    
+    # Copy nginx configurations including sites-available
+    if [ -d "$extract_dir/configs/v0.1.0/nginx" ]; then
+        log "Copying nginx configurations..."
+        cp -rv "$extract_dir/configs/v0.1.0/nginx/"* "$KISSPANEL_DIR/conf/nginx/"
+        
+        # Explicitly check for sites-available/default
+        if [ ! -f "$KISSPANEL_DIR/conf/nginx/sites-available/default" ]; then
+            error "Default site configuration not found in downloaded package"
+        fi
+    else
+        error "Nginx configuration directory not found"
+    fi
+    
+    # Copy other configurations...
+    for dir in php panel system; do
+        if [ -d "$extract_dir/configs/v0.1.0/$dir" ]; then
             log "Copying $dir configurations..."
             cp -rv "$extract_dir/configs/v0.1.0/$dir" "$KISSPANEL_DIR/conf/"
         else
@@ -480,10 +490,12 @@ install_nginx() {
 
     # Create symbolic link for default site
     if [ -f "$KISSPANEL_DIR/conf/nginx/sites-available/default" ]; then
+        log "Creating symlink for default site configuration..."
         ln -sf "$KISSPANEL_DIR/conf/nginx/sites-available/default" \
               "$KISSPANEL_DIR/conf/nginx/sites-enabled/default"
     else
-        error "Default site configuration not found"
+        ls -la "$KISSPANEL_DIR/conf/nginx/sites-available/"
+        error "Default site configuration not found at $KISSPANEL_DIR/conf/nginx/sites-available/default"
     fi
 
     # Set proper permissions
