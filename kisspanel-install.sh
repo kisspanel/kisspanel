@@ -5,7 +5,7 @@
 #----------------------------------------------------------#
 
 # Version: 0.1.0
-# Build Date: 2024-11-24 22:22:21
+# Build Date: 2024-11-24 23:11:40
 # Website: https://kisspanel.org
 # GitHub: https://github.com/kisspanel/kisspanel
 
@@ -230,6 +230,16 @@ check_existing_panel() {
     done
 }
 
+verify_ssl_cert() {
+    if [ ! -f "$KISSPANEL_DIR/ssl/panel.crt" ] || [ ! -f "$KISSPANEL_DIR/ssl/panel.key" ]; then
+        error "SSL certificate files not found"
+    fi
+    
+    if ! openssl x509 -in "$KISSPANEL_DIR/ssl/panel.crt" -noout -text >/dev/null 2>&1; then
+        error "Invalid SSL certificate"
+    fi
+}
+
 # Check for selinux status
 check_selinux() {
     if command -v getenforce >/dev/null 2>&1; then
@@ -431,35 +441,55 @@ install_nginx() {
     esac
 
     # Create directory structure
-    mkdir -p $KISSPANEL_DIR/conf/nginx/conf.d
-    mkdir -p $KISSPANEL_DIR/conf/nginx/sites-available
-    mkdir -p $KISSPANEL_DIR/conf/nginx/sites-enabled
+    mkdir -p $KISSPANEL_DIR/conf/nginx/{conf.d,sites-available,sites-enabled}
     mkdir -p /var/log/nginx
     mkdir -p /var/www/html
 
-    # Download configurations first
+    # Create SSL directory and generate self-signed certificate
+    mkdir -p $KISSPANEL_DIR/ssl
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+        -keyout $KISSPANEL_DIR/ssl/panel.key \
+        -out $KISSPANEL_DIR/ssl/panel.crt \
+        -subj "/C=US/ST=State/L=City/O=KissPanel/CN=${HOSTNAME}"
+    
+    chmod 600 $KISSPANEL_DIR/ssl/panel.key
+    chmod 644 $KISSPANEL_DIR/ssl/panel.crt
+
+    # Create required directories for PHP integration
+    mkdir -p /var/log/php-fpm
+    mkdir -p /var/lib/php/session
+    mkdir -p /var/lib/php/wsdlcache
+    
+    # Set proper permissions
+    chown -R nginx:nginx /var/log/php-fpm
+    chown -R nginx:nginx /var/lib/php
+    
+    # Create PHP-FPM socket directory if it doesn't exist
+    mkdir -p /run/php-fpm
+    chown nginx:nginx /run/php-fpm
+
+    # Download configurations
     log "Downloading configurations..."
     download_configs
 
-    # Now copy from our downloaded configs
-    if [ ! -f "$KISSPANEL_DIR/conf/nginx/nginx.conf" ]; then
-        error "Nginx configuration files not found after download"
-    fi
-
-    # Create symbolic link for Nginx configuration
+    # Create symbolic links for Nginx configuration
     if [ -f /etc/nginx/nginx.conf ]; then
         mv /etc/nginx/nginx.conf /etc/nginx/nginx.conf.original
     fi
     ln -sf $KISSPANEL_DIR/conf/nginx/nginx.conf /etc/nginx/nginx.conf
 
-    # Configure default website
-    ln -sf $KISSPANEL_DIR/conf/nginx/sites-available/default $KISSPANEL_DIR/conf/nginx/sites-enabled/
+    # Create symbolic link for default site
+    if [ -f "$KISSPANEL_DIR/conf/nginx/sites-available/default" ]; then
+        ln -sf "$KISSPANEL_DIR/conf/nginx/sites-available/default" \
+              "$KISSPANEL_DIR/conf/nginx/sites-enabled/default"
+    else
+        error "Default site configuration not found"
+    fi
 
     # Set proper permissions
     chown -R root:root $KISSPANEL_DIR/conf/nginx
     chmod -R 644 $KISSPANEL_DIR/conf/nginx
-    chmod 755 $KISSPANEL_DIR/conf/nginx
-    chmod 755 $KISSPANEL_DIR/conf/nginx/{sites-available,sites-enabled,conf.d}
+    find $KISSPANEL_DIR/conf/nginx -type d -exec chmod 755 {} \;
 
     # Create system user for Nginx if it doesn't exist
     if ! id -u nginx >/dev/null 2>&1; then
@@ -476,6 +506,13 @@ install_nginx() {
 
     # Verify installation
     if ! nginx -t; then
+        log "Nginx configuration test failed. Checking configuration:"
+        log "Contents of /etc/nginx/nginx.conf:"
+        cat /etc/nginx/nginx.conf
+        log "Contents of sites-enabled:"
+        ls -la $KISSPANEL_DIR/conf/nginx/sites-enabled/
+        log "Contents of sites-available:"
+        ls -la $KISSPANEL_DIR/conf/nginx/sites-available/
         error "Nginx configuration test failed"
     fi
 
@@ -510,177 +547,6 @@ install_sqlite() {
     log "SQLite installation completed"
 }
 
-configure_nginx() {
-    log "Configuring Nginx..."
-
-    # Basic Nginx configuration
-    cat > $KISSPANEL_DIR/conf/nginx/nginx.conf <<EOF
-user nginx;
-worker_processes auto;
-error_log /var/log/nginx/error.log warn;
-pid /var/run/nginx.pid;
-
-events {
-    worker_connections 1024;
-    multi_accept on;
-    use epoll;
-}
-
-http {
-    include /etc/nginx/mime.types;
-    default_type application/octet-stream;
-
-    log_format main '\$remote_addr - \$remote_user [\$time_local] "\$request" '
-                    '\$status \$body_bytes_sent "\$http_referer" '
-                    '"\$http_user_agent" "\$http_x_forwarded_for"';
-
-    access_log /var/log/nginx/access.log main;
-
-    sendfile on;
-    tcp_nopush on;
-    tcp_nodelay on;
-    keepalive_timeout 65;
-    types_hash_max_size 2048;
-    server_tokens off;
-
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_prefer_server_ciphers on;
-    ssl_session_cache shared:SSL:10m;
-    ssl_session_timeout 10m;
-
-    gzip on;
-    gzip_disable "msie6";
-    gzip_vary on;
-    gzip_proxied any;
-    gzip_comp_level 6;
-    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
-
-    include $KISSPANEL_DIR/conf/nginx/conf.d/*.conf;
-    include $KISSPANEL_DIR/conf/nginx/sites-enabled/*;
-}
-EOF
-
-    # Configure default virtual host
-    cat > $KISSPANEL_DIR/conf/nginx/sites-available/default <<EOF
-server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
-    server_name _;
-    root /var/www/html;
-    index index.html index.htm;
-
-    location / {
-        try_files \$uri \$uri/ =404;
-    }
-}
-EOF
-
-    # Create default index page
-    cat > /var/www/html/index.html <<EOF
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Welcome to KissPanel</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 40px; }
-        h1 { color: #333; }
-    </style>
-</head>
-<body>
-    <h1>Welcome to KissPanel</h1>
-    <p>If you see this page, the web server is successfully installed and working.</p>
-</body>
-</html>
-EOF
-
-    # Test configuration
-    nginx -t || error "Nginx configuration test failed"
-    
-    # Reload Nginx
-    $SERVICE_RESTART nginx
-
-    log "Nginx configuration completed"
-}
-
-#----------------------------------------------------------#
-#                    Apache Functions                        #
-#----------------------------------------------------------#
-
-install_apache() {
-    if [ "$APACHE" != "yes" ]; then
-        return
-    fi
-
-    log "Installing Apache web server..."
-
-    # Install Apache packages based on OS
-    case $OS in
-        ubuntu|debian)
-            $PACKAGE_INSTALL $APACHE_PACKAGES
-            a2enmod rewrite
-            a2enmod ssl
-            a2enmod proxy
-            a2enmod proxy_fcgi
-            a2enmod headers
-            ;;
-        centos|rhel|rocky|alma)
-            $PACKAGE_INSTALL $APACHE_PACKAGES
-            # Enable required modules through configuration
-            ;;
-        *)
-            error "Unsupported OS for Apache installation"
-            ;;
-    esac
-
-    # Create directory structure
-    mkdir -p $KISSPANEL_DIR/conf/apache/conf.d
-    mkdir -p $KISSPANEL_DIR/conf/apache/sites-available
-    mkdir -p $KISSPANEL_DIR/conf/apache/sites-enabled
-
-    # Configure Apache to work with Nginx
-    configure_apache_nginx
-
-    # Set proper permissions
-    chown -R root:root $KISSPANEL_DIR/conf/apache
-    chmod -R 644 $KISSPANEL_DIR/conf/apache
-    chmod 755 $KISSPANEL_DIR/conf/apache
-    chmod 755 $KISSPANEL_DIR/conf/apache/{sites-available,sites-enabled,conf.d}
-
-    # Enable and start Apache
-    $SERVICE_ENABLE $APACHE_SERVICE
-    $SERVICE_START $APACHE_SERVICE
-
-    log "Apache installation completed"
-}
-
-configure_apache_nginx() {
-    log "Configuring Apache to work with Nginx..."
-
-    # Configure Apache to listen on alternate port
-    case $OS in
-        ubuntu|debian)
-            sed -i 's/Listen 80/Listen 8080/' /etc/apache2/ports.conf
-            ;;
-        centos|rhel|rocky|alma)
-            echo "Listen 8080" > /etc/httpd/conf.d/ports.conf
-            ;;
-    esac
-
-    # Configure Nginx to proxy to Apache
-    cat > $KISSPANEL_DIR/conf/nginx/conf.d/apache_proxy.conf <<EOF
-upstream apache_backend {
-    server 127.0.0.1:8080;
-    keepalive 32;
-}
-EOF
-
-    log "Apache-Nginx configuration completed"
-}
-
-#----------------------------------------------------------#
-#                    PHP Functions                           #
-#----------------------------------------------------------#
-
 install_php() {
     if [ "$PHPFPM" != "yes" ]; then
         return
@@ -711,8 +577,14 @@ install_php() {
     mkdir -p $KISSPANEL_DIR/conf/php/fpm/pool.d
     mkdir -p $KISSPANEL_DIR/conf/php/cli
 
-    # Configure PHP
-    configure_php
+    # Set proper permissions for PHP directories
+    chown -R nginx:nginx /var/lib/php
+    chmod 755 /var/lib/php
+
+    # Verify PHP-FPM configuration
+    if ! php-fpm -t; then
+        error "PHP-FPM configuration test failed"
+    fi
 
     # Enable and start PHP-FPM
     $SERVICE_ENABLE $PHP_SERVICE
@@ -721,137 +593,44 @@ install_php() {
     log "PHP-FPM installation completed"
 }
 
-configure_php() {
-    log "Configuring PHP..."
-
-    # Basic PHP configuration
-    cat > $KISSPANEL_DIR/conf/php/fpm/php.ini <<EOF
-[PHP]
-memory_limit = 128M
-max_execution_time = 30
-max_input_time = 60
-post_max_size = 64M
-upload_max_filesize = 64M
-date.timezone = UTC
-expose_php = Off
-
-[Session]
-session.gc_maxlifetime = 1440
-session.save_handler = files
-session.save_path = /var/lib/php/sessions
-session.cookie_secure = On
-session.cookie_httponly = On
-
-[opcache]
-opcache.enable = 1
-opcache.memory_consumption = 128
-opcache.interned_strings_buffer = 8
-opcache.max_accelerated_files = 4000
-opcache.revalidate_freq = 60
-opcache.fast_shutdown = 1
-opcache.enable_cli = 1
-EOF
-
-    # Configure PHP-FPM pool
-    cat > $KISSPANEL_DIR/conf/php/fpm/pool.d/www.conf <<EOF
-[www]
-user = nginx
-group = nginx
-listen = 127.0.0.1:9000
-listen.allowed_clients = 127.0.0.1
-pm = dynamic
-pm.max_children = 50
-pm.start_servers = 5
-pm.min_spare_servers = 5
-pm.max_spare_servers = 35
-pm.max_requests = 500
-php_admin_value[error_log] = /var/log/php-fpm/www-error.log
-php_admin_flag[log_errors] = on
-EOF
-
-    log "PHP configuration completed"
-}
-
-#----------------------------------------------------------#
-#                    Multi-PHP Functions                     #
-#----------------------------------------------------------#
-
-install_multiphp() {
-    if [ "$MULTIPHP" != "yes" ]; then
+install_apache() {
+    if [ "$APACHE" != "yes" ]; then
         return
     fi
 
-    log "Installing multiple PHP versions..."
+    log "Installing Apache web server..."
 
-    # Define PHP versions to install
-    PHP_VERSIONS="5.6 7.0 7.1 7.2 7.3 7.4 8.0 8.1 8.2"
-
-    for version in $PHP_VERSIONS; do
-        install_php_version "$version"
-    done
-
-    log "Multiple PHP versions installation completed"
-}
-
-install_php_version() {
-    local version=$1
-    log "Installing PHP $version..."
-
+    # Install Apache packages based on OS
     case $OS in
         ubuntu|debian)
-            $PACKAGE_INSTALL php${version}-fpm php${version}-common php${version}-cli \
-                php${version}-mysql php${version}-pgsql php${version}-gd \
-                php${version}-curl php${version}-xml php${version}-mbstring \
-                php${version}-zip php${version}-bz2 php${version}-intl
+            $PACKAGE_INSTALL $APACHE_PACKAGES
+            a2enmod rewrite
+            a2enmod ssl
+            a2enmod proxy
+            a2enmod proxy_fcgi
+            a2enmod headers
             ;;
         centos|rhel|rocky|alma)
-            dnf module reset php
-            dnf module enable php:remi-${version} -y
-            $PACKAGE_INSTALL php-fpm php-common php-cli php-mysqlnd \
-                php-pgsql php-gd php-curl php-xml php-mbstring \
-                php-zip php-bz2 php-intl
+            $PACKAGE_INSTALL $APACHE_PACKAGES
+            ;;
+        *)
+            error "Unsupported OS for Apache installation"
             ;;
     esac
 
-    # Configure this PHP version
-    configure_php_version "$version"
-}
+    # Create directory structure
+    mkdir -p $KISSPANEL_DIR/conf/apache/{conf.d,sites-available,sites-enabled}
 
-configure_php_version() {
-    local version=$1
-    log "Configuring PHP $version..."
+    # Set proper permissions
+    chown -R root:root $KISSPANEL_DIR/conf/apache
+    chmod -R 644 $KISSPANEL_DIR/conf/apache
+    find $KISSPANEL_DIR/conf/apache -type d -exec chmod 755 {} \;
 
-    # Create configuration directories
-    mkdir -p $KISSPANEL_DIR/conf/php/${version}/fpm/pool.d
+    # Enable and start Apache
+    $SERVICE_ENABLE $APACHE_SERVICE
+    $SERVICE_START $APACHE_SERVICE
 
-    # Configure PHP-FPM pool for this version
-    cat > $KISSPANEL_DIR/conf/php/${version}/fpm/pool.d/www.conf <<EOF
-[www-php${version}]
-user = nginx
-group = nginx
-listen = 127.0.0.1:90${version//./}
-listen.allowed_clients = 127.0.0.1
-pm = dynamic
-pm.max_children = 50
-pm.start_servers = 5
-pm.min_spare_servers = 5
-pm.max_spare_servers = 35
-pm.max_requests = 500
-php_admin_value[error_log] = /var/log/php-fpm/www-php${version}-error.log
-php_admin_flag[log_errors] = on
-EOF
-
-    # Enable and start this PHP-FPM version
-    case $OS in
-        ubuntu|debian)
-            $SERVICE_ENABLE php${version}-fpm
-            $SERVICE_START php${version}-fpm
-            ;;
-        centos|rhel|rocky|alma)
-            $SERVICE_ENABLE php-fpm
-            $SERVICE_START php-fpm
-            ;;
-    esac
+    log "Apache installation completed"
 }
 
 # interactive functions
