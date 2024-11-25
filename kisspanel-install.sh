@@ -5,7 +5,7 @@
 #----------------------------------------------------------#
 
 # Version: 0.1.0
-# Build Date: 2024-11-24 22:18:27
+# Build Date: 2024-11-24 22:22:21
 # Website: https://kisspanel.org
 # GitHub: https://github.com/kisspanel/kisspanel
 
@@ -165,7 +165,7 @@ download_configs() {
     log "Downloading configuration files..."
     
     local tmp_dir=$(mktemp -d)
-    local config_version="0.1.3"
+    local config_version="0.1.0"  # Changed from 0.1.3 to 0.1.0
     local config_url="https://github.com/kisspanel/kisspanel/archive/refs/tags/v${config_version}.tar.gz"
     
     log "Downloading from: $config_url"
@@ -183,6 +183,7 @@ download_configs() {
     # List extracted contents for debugging
     log "Extracted files:"
     ls -la "$tmp_dir"
+    ls -la "$tmp_dir/kisspanel-${config_version}/configs"  # Added this line for more debug info
     
     # Create configuration directories
     mkdir -p "$KISSPANEL_DIR/conf"
@@ -198,9 +199,9 @@ download_configs() {
     # Copy configurations with verbose logging
     log "Installing configuration files..."
     for dir in nginx php panel system; do
-        if [ -d "$extract_dir/configs/$dir" ]; then
+        if [ -d "$extract_dir/configs/v0.1.0/$dir" ]; then  # Updated path to include v0.1.0
             log "Copying $dir configurations..."
-            cp -rv "$extract_dir/configs/$dir" "$KISSPANEL_DIR/conf/"
+            cp -rv "$extract_dir/configs/v0.1.0/$dir" "$KISSPANEL_DIR/conf/"
         else
             warning "Directory $dir not found in configurations"
         fi
