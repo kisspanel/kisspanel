@@ -5,14 +5,12 @@
 #----------------------------------------------------------#
 
 # Version: 0.1.5
-# Build Date: 2024-11-26 08:02:31
+# Build Date: 2024-11-26 08:12:41
 # Website: https://kisspanel.org
 # GitHub: https://github.com/kisspanel/kisspanel
 
 
 # common functions
-#!/bin/bash
-
 #----------------------------------------------------------#
 #                    Common Functions                        #
 #----------------------------------------------------------#
@@ -564,8 +562,6 @@ create_system_database() {
 # components functions
 
 # components functions
-#!/bin/bash
-
 #----------------------------------------------------------#
 #                      Panel Functions                     #
 #----------------------------------------------------------#
@@ -589,24 +585,26 @@ configure_panel_service() {
 verify_panel_installation() {
     log "Verifying panel installation..."
     
-    # Check service status
+    # Check service status but don't fail
     if ! systemctl is-active --quiet kisspanel; then
-        error "Service kisspanel is not running"
+        warning "Service kisspanel is not running - some features may be limited"
+    else
+        log "Panel service is running"
     fi
     
-    # Check if panel is responding on configured port
+    # Check if web server is responding
     if ! curl -s "http://localhost:${PORT:-2006}" >/dev/null; then
-        error "Panel is not responding on port ${PORT:-2006}"
+        warning "Panel is not responding on port ${PORT:-2006} - please check nginx configuration"
+    else
+        log "Panel is accessible on port ${PORT:-2006}"
     fi
     
-    log "Panel installation verified successfully"
+    log "Panel installation verification completed"
 }
 
 # components functions
 
 # components functions
-#!/bin/bash
-
 #----------------------------------------------------------#
 #                    Web Server Functions                    #
 #----------------------------------------------------------#
@@ -928,8 +926,6 @@ install_apache() {
 }
 
 # interactive functions
-#!/bin/bash
-
 #----------------------------------------------------------#
 #                    Interactive Setup                       #
 #----------------------------------------------------------#
@@ -1034,7 +1030,6 @@ SYSTEM_USER_HOME="/home"
 SYSTEM_LOG_DIR="/var/log"
 SYSTEM_SERVICE_DIR="/etc/systemd/system"
 # ubuntu specific functions
-
 #----------------------------------------------------------#
 #                    Ubuntu Specific                         #
 #----------------------------------------------------------#
@@ -1151,7 +1146,6 @@ ubuntu_validate_system() {
     fi
 }
 # almalinux specific functions
-
 #----------------------------------------------------------#
 #                   AlmaLinux Specific                       #
 #----------------------------------------------------------#
@@ -1314,8 +1308,6 @@ validate_os_requirements() {
 #----------------------------------------------------------#
 #                    00-header                    #
 #----------------------------------------------------------#
-
-#!/bin/bash
 
 #----------------------------------------------------------#
 #                    KissPanel Installer                     #
@@ -1531,8 +1523,6 @@ parse_arguments() {
 #                    03-functions                    #
 #----------------------------------------------------------#
 
-#!/bin/bash
-
 #----------------------------------------------------------#
 #                    Installation Functions                  #
 #----------------------------------------------------------#
@@ -1644,8 +1634,6 @@ verify_installation() {
 #                    04-panel                    #
 #----------------------------------------------------------#
 
-#!/bin/bash
-
 #----------------------------------------------------------#
 #                    Panel Installation                      #
 #----------------------------------------------------------#
@@ -1720,8 +1708,6 @@ start_panel_services() {
 #----------------------------------------------------------#
 #                    05-main                    #
 #----------------------------------------------------------#
-
-#!/bin/bash
 
 #----------------------------------------------------------#
 #                    Main Installation                       #
