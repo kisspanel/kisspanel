@@ -5,7 +5,7 @@
 #----------------------------------------------------------#
 
 # Version: 0.1.5
-# Build Date: 2024-11-26 10:58:25
+# Build Date: 2024-11-26 11:11:33
 # Website: https://kisspanel.org
 # GitHub: https://github.com/kisspanel/kisspanel
 
@@ -188,7 +188,7 @@ download_configs() {
     
     # Check if configs directory exists
     if [ ! -d "$tmp_dir/nginx" ]; then
-        rm -rf "$tmp_dir"
+        # rm -rf "$tmp_dir"
         error "Configuration directory not found in downloaded package"
     fi
     
@@ -224,9 +224,9 @@ download_configs() {
     find "$KISSPANEL_DIR/conf" -type f -exec chmod 644 {} \;
     
     # Cleanup
-    rm -rf "$tmp_dir"
+    # rm -rf "$tmp_dir"
     
-    log "Configuration files installed successfully"
+    log "Configuration files installed successfully $tmp_dir"
 }
 
 # Check for existing panel installations
@@ -791,7 +791,7 @@ check_nginx_requirements() {
 
     for path in "${required_paths[@]}"; do
         if [ ! -e "$path" ]; then
-            error "Required path not found: $path"
+            warning "Required path not found: $path"
         fi
     done
 }
