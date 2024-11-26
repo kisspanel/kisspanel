@@ -120,7 +120,7 @@ test_web_access() {
     echo "Testing web access..."
     
     local port=$(grep -r "listen" /etc/nginx/conf.d/panel.conf | grep -oE '[0-9]+' | head -1)
-    port=${port:-8083}
+    port=${port:-2006}
     
     if curl -k -s -o /dev/null "https://localhost:$port"; then
         log_pass "Panel is accessible on port $port"
