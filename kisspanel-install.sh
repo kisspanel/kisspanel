@@ -5,7 +5,7 @@
 #----------------------------------------------------------#
 
 # Version: 0.1.5
-# Build Date: 2024-11-26 08:28:48
+# Build Date: 2024-11-26 10:58:25
 # Website: https://kisspanel.org
 # GitHub: https://github.com/kisspanel/kisspanel
 
@@ -721,6 +721,16 @@ install_nginx() {
     # Set proper permissions for web directories
     chown -R nginx:nginx /var/www/html
     chmod 755 /var/www/html
+
+    # copy default file to /usr/local/kisspanel/web
+    cp $KISSPANEL_DIR/conf/nginx/html/*.html $KISSPANEL_DIR/web/
+    chown -R root:nginx $KISSPANEL_DIR/web
+    chmod 755 $KISSPANEL_DIR/web
+    chmod 644 $KISSPANEL_DIR/web/*.html
+
+    # set SELinux context
+    semanage fcontext -a -t httpd_sys_content_t "$KISSPANEL_DIR/web(/.*)?"
+    restorecon -Rv $KISSPANEL_DIR/web
 
     # Debug: List key directories
     log "Checking directory structure..."
