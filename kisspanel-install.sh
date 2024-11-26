@@ -5,7 +5,7 @@
 #----------------------------------------------------------#
 
 # Version: 0.1.5
-# Build Date: 2024-11-26 08:12:41
+# Build Date: 2024-11-26 08:28:48
 # Website: https://kisspanel.org
 # GitHub: https://github.com/kisspanel/kisspanel
 
@@ -966,7 +966,6 @@ interactive_setup() {
 #                    OS-Specific Functions                   #
 #----------------------------------------------------------#
 
-
 #----------------------------------------------------------#
 #                    Base OS Variables                       #
 #----------------------------------------------------------#
@@ -1609,25 +1608,41 @@ post_install() {
 
 verify_installation() {
     log "Verifying installation..."
+    local has_errors=0
     
     # Check if main services are running
     for service in nginx php-fpm kisspanel; do
         if ! systemctl is-active --quiet $service; then
-            error "Service $service is not running"
+            warning "Service $service is not running"
+            has_errors=1
+        else
+            log "Service $service is running"
         fi
     done
     
     # Check if panel is accessible
     if ! curl -k -s -o /dev/null "https://localhost:$PORT"; then
-        error "Panel is not accessible on port $PORT"
+        warning "Panel is not accessible on port $PORT"
+        has_errors=1
+    else
+        log "Panel is accessible on port $PORT"
     fi
     
     # Check database
     if ! sqlite3 $KISSPANEL_DIR/data/kisspanel.db "SELECT 1;" >/dev/null 2>&1; then
-        error "Database is not accessible"
+        warning "Database is not accessible"
+        has_errors=1
+    else
+        log "Database is accessible"
     fi
     
-    log "Installation verified successfully"
+    if [ $has_errors -eq 0 ]; then
+        log "Installation verified successfully"
+    else
+        warning "Installation completed with warnings"
+    fi
+    
+    return $has_errors
 }
 
 #----------------------------------------------------------#
