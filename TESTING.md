@@ -137,7 +137,7 @@ Run the installer with specific options:
 
 ```bash
 ./kisspanel-install.sh \
-    --port 2083 \
+    --port 2006 \
     --hostname panel.yourdomain.com \
     --email admin@yourdomain.com \
     --password "SecurePass123"
@@ -214,7 +214,7 @@ netstat -tlpn
 firewall-cmd --list-all
 
 # Test panel access
-curl -Ik https://localhost:2083
+curl -Ik https://localhost:2006
 ```
 
 ### 6. Database
@@ -283,7 +283,7 @@ netstat -tlpn
 firewall-cmd --list-all
 
 # Test SSL certificates
-openssl s_client -connect localhost:2083
+openssl s_client -connect localhost:2006
 ```
 
 ## Cleanup Procedure

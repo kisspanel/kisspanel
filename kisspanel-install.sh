@@ -5,7 +5,7 @@
 #----------------------------------------------------------#
 
 # Version: 0.1.5
-# Build Date: 2024-11-25 10:39:03
+# Build Date: 2024-11-26 08:02:31
 # Website: https://kisspanel.org
 # GitHub: https://github.com/kisspanel/kisspanel
 
@@ -484,7 +484,7 @@ show_usage() {
     echo "--force [yes|no]     Force installation (default: no)"
     echo
     echo "Example:"
-    echo "bash install.sh --port 2083 --hostname panel.domain.com"
+    echo "bash install.sh --port 2006 --hostname panel.domain.com"
     echo
 }
 
@@ -562,6 +562,45 @@ create_system_database() {
 # components functions
 
 # components functions
+
+# components functions
+#!/bin/bash
+
+#----------------------------------------------------------#
+#                      Panel Functions                     #
+#----------------------------------------------------------#
+
+configure_panel_service() {
+    log "Configuring panel service..."
+    
+    # Copy service file from configs
+    cp "$KISSPANEL_DIR/conf/system/systemd/kisspanel.service" /etc/systemd/system/
+    
+    # Reload systemd
+    systemctl daemon-reload
+    
+    # Enable and start service
+    systemctl enable kisspanel
+    systemctl start kisspanel
+    
+    log "Panel service configured successfully"
+}
+
+verify_panel_installation() {
+    log "Verifying panel installation..."
+    
+    # Check service status
+    if ! systemctl is-active --quiet kisspanel; then
+        error "Service kisspanel is not running"
+    fi
+    
+    # Check if panel is responding on configured port
+    if ! curl -s "http://localhost:${PORT:-2006}" >/dev/null; then
+        error "Panel is not responding on port ${PORT:-2006}"
+    fi
+    
+    log "Panel installation verified successfully"
+}
 
 # components functions
 
@@ -1634,6 +1673,16 @@ install_panel_configs() {
     # Create symbolic links for configurations
     ln -sf $KISSPANEL_DIR/conf/panel/nginx.conf /etc/nginx/conf.d/panel.conf
     ln -sf $KISSPANEL_DIR/conf/panel/php-fpm.conf /etc/php-fpm.d/panel.conf
+    
+    # Verify nginx config
+    if ! nginx -t; then
+        error "Invalid nginx configuration"
+    fi
+    
+    # Verify PHP-FPM config
+    if ! php-fpm -t; then
+        error "Invalid PHP-FPM configuration"
+    fi
     
     # Install systemd service
     ln -sf $KISSPANEL_DIR/conf/panel/systemd.conf /etc/systemd/system/kisspanel.service

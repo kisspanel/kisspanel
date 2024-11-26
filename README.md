@@ -68,7 +68,7 @@ This tool helps you:
 ./kisspanel-install.sh
 
 # Custom installation with specific options
-./kisspanel-install.sh --port 2083 --hostname panel.yourdomain.com
+./kisspanel-install.sh --port 2006 --hostname panel.yourdomain.com
 ```
 
 For all available options, run:
